@@ -31,7 +31,7 @@ RxVision provides two ways to use the application:
 
 #### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/RxVision.git
+git clone https://github.com/jaanu2505/RxVision-ocr-prescription-reader
 cd RxVision
 ```
 
@@ -42,36 +42,35 @@ pip install -r requirements.txt
 ```
 
 #### 3. Run the Application
-- Place your input images in the `input/` folder.
+
 - Run the application:
   ```bash
   python main.py
   ```
-- The extracted text will be saved in the `output/` folder.
 
-#### 4. Optional Features
-- Use the cropping tool before OCR:
-  ```bash
-  python crop_tool.py
-  ```
 - Adjust settings in `config.json` for language, output format, etc.
 
 ---
 
-### Option 2: Using the Executable File
+### Option 2: Using the `.zip` File
 
-#### 1. Download the `.exe` File
-- Download the pre-built executable file from the [Releases](https://github.com/your-username/RxVision/releases) section of this repository.
+#### 1. Download the `.zip` File
+- Go to the [Releases](https://github.com/jaanu2505/RxVision-ocr-prescription-reader) section of this repository.
+- Download the latest `.zip` file containing the `.exe` and other necessary files.
 
-#### 2. Run the Application
+#### 2. Extract the `.zip` File
+- Unzip the file to your preferred location.
+- Ensure the folder contains the `.exe` file and required resources (e.g., configuration or sample input files).
+
+#### 3. Run the Application
 - Double-click the `.exe` file to launch the application.
-- Follow the on-screen instructions:
-  1. Select an input image file or folder.
-  2. (Optional) Use the integrated cropping tool for better OCR results.
-  3. Extracted text will be saved in the chosen output location.
+- Follow the on-screen instructions to:
+  1. Select an input image or folder.
+  2. (Optional) Use the cropping tool for better OCR results.
+  3. View or save the extracted text.
 
-#### 3. No Installation Required
-- The `.exe` file runs standalone and does not require Python or any additional setup.
+#### 4. No Installation Required
+- The `.zip` file is prepackaged with everything you need to run the application. No additional setup is required.
 
 ---
 
