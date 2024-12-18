@@ -1,0 +1,6 @@
+pytesseract==0.3.10
+opencv-python==4.8.0.76
+Pillow==10.0.0
+numpy==1.24.4
+google-cloud-vision
+tkinter.
