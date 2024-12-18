@@ -85,11 +85,6 @@ Contributions are welcome! Feel free to open an issue or submit a pull request f
 
 ---
 
-## License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-
----
-
 ## Support
-If you encounter any issues or have questions, please create an issue in this repository or contact us at support@rxvision.com.
+If you encounter any issues or have questions, please create an issue in this repository.
 
