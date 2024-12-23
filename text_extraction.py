@@ -1,4 +1,4 @@
-`# extract_text.py
+# extract_text.py
 import pytesseract
 from PIL import Image
 from preprocessing import process_image
@@ -15,7 +15,7 @@ def get_tesseract_confidence(image):
     data= pytesseract.image_to_data(image, output_type= pytesseract.Output.DICT)
 
     #Get the confidence score, (removing -1 which means to detection)
-    = [int(conf) for conf in data['conf'] if conf != '-1']
+    confidences = [int(conf) for conf in data['conf'] if conf != '-1']
 
     #return average confidence score
     return sum(confidences)/len(confidences) if confidences else 0
