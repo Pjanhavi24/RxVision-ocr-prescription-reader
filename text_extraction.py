@@ -1,3 +1,4 @@
+
 import pytesseract
 from PIL import Image
 from preprocessing import process_image
