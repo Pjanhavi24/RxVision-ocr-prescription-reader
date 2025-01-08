@@ -5,10 +5,11 @@ import ctypes
 from open_file_dialog import open_file_dialog
 from switchpages import *
 from crop import open_crop_window
+from process_and_extract import *
 from process_and_extract import processAndExtract
 from PyQt6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale, QMetaObject, QObject, QPoint, QRect, QSize, QTime, QUrl, Qt, QTimer)
 from PyQt6.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont, QFontDatabase, QGradient, QIcon, QImage, QKeySequence, QLinearGradient, QPainter, QPalette, QPixmap, QRadialGradient, QTransform)
-from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QStackedWidget, QTextEdit, QVBoxLayout, QWidget, QGraphicsDropShadowEffect)
+from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QStackedWidget, QTextEdit, QVBoxLayout, QWidget, QGraphicsDropShadowEffect,QMessageBox)
 
 
 class Ui_MainWindow(object):
@@ -33,10 +34,15 @@ class Ui_MainWindow(object):
 
             # If the extracted text is a list, join it into a string
             if isinstance(extracted_text, list):
-                extracted_text = '\n'.join(extracted_text)  # Join the list with newlines for display
+                medicine_names = extracted_text  #already a list of medicines
+            else:
+                medicine_names=extracted_text.split('\n') 
+
+            # Populate medicine labels in the left layout (page 3)
+            self.populate_medicine_labels(medicine_names)
 
             # Display extracted text in page3 (QTextEdit)
-            self.display_textedit.setPlainText(extracted_text)
+            # self.display_textedit.setPlainText(extracted_text)
 
             # Switch to page 3 to show the extracted text
             self.stackedWidget.setCurrentIndex(2)
@@ -190,7 +196,7 @@ class Ui_MainWindow(object):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.home_image_2.sizePolicy().hasHeightForWidth())
         self.home_image_2.setSizePolicy(sizePolicy2)
-        self.home_image_2.setPixmap(QPixmap(r"C:\Users\aujal\OneDrive\Desktop\ocr prescription reader\OCR-Prescription-Reader\gui\resource\home_image.png"))
+        self.home_image_2.setPixmap(QPixmap(r"resource\home_image.png"))
         self.home_image_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_2.addWidget(self.home_image_2)
@@ -498,194 +504,75 @@ class Ui_MainWindow(object):
 
 
         self.verticalLayout_5.addLayout(self.verticalLayout)
-
         self.stackedWidget.addWidget(self.page_2)
+        
         self.page_3 = QWidget()
         self.page_3.setObjectName(u"page_3")
-        self.verticalLayout_7 = QVBoxLayout(self.page_3)
-        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.verticalLayout_8 = QVBoxLayout()
-        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
-        self.verticalLayout_8.setContentsMargins(40, 20, 40, 20)
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(-1, -1, -1, 20)
-        self.label_9 = QLabel(self.page_3)
-        self.label_9.setObjectName(u"label_9")
-        sizePolicy3.setHeightForWidth(self.label_9.sizePolicy().hasHeightForWidth())
-        self.label_9.setSizePolicy(sizePolicy3)
-        self.label_9.setMaximumSize(QSize(40, 40))
-        self.label_9.setPixmap(QPixmap(u"resource/fileicon.png"))
-        self.label_9.setScaledContents(True)
 
-        self.horizontalLayout.addWidget(self.label_9)
+        self.page_3_layout=QVBoxLayout(self.page_3)
+        self.page_3_layout.setSpacing(10)
+        self.page_3_layout.setContentsMargins(10, 10, 10, 10)
 
-        self.label_8 = QLabel(self.page_3)
-        self.label_8.setObjectName(u"label_8")
-        sizePolicy7 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        sizePolicy7.setHorizontalStretch(0)
-        sizePolicy7.setVerticalStretch(0)
-        sizePolicy7.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
-        self.label_8.setSizePolicy(sizePolicy7)
-        self.label_8.setFont(font3)
-        self.label_8.setStyleSheet(u"QLabel{\n"
-"color:#6B7075;\n"
-"}")
+        heading_font=QFont()
+        heading_font.setFamilies([u"Berlin Sans FB Demi"])
+        heading_font.setPointSize(33)
+        heading_font.setBold(True)
+        heading_font.setItalic(False)
 
-        self.horizontalLayout.addWidget(self.label_8)
+        # Create and configure the heading label
+        self.heading_label = QLabel("RxVision")
+        self.heading_label.setFont(heading_font)
+        self.heading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.heading_label.setStyleSheet("color: #6B7075;")  # Customize as needed
+        self.page_3_layout.addWidget(self.heading_label)
+        self.heading_label.setMargin(0)
 
+        # Create a horizontal layout for left and right panels
+        self.content_layout = QHBoxLayout()
 
-        self.verticalLayout_8.addLayout(self.horizontalLayout)
+        #Create a left Panel
+        self.left_panel=QWidget()
+        self.left_layout=QVBoxLayout(self.left_panel)
+        self.left_panel.setStyleSheet("background-color: #f0f0f0; border-radius: 8px;")
+        self.left_layout.setSpacing(10)
+        self.left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        self.line_5 = QFrame(self.page_3)
-        self.line_5.setObjectName(u"line_5")
-        self.line_5.setFrameShape(QFrame.Shape.HLine)
-        self.line_5.setFrameShadow(QFrame.Shadow.Sunken)
+        # Add Medicine Labels
+        # medicine_names = confirm_selection
+    
+        # self.populate_medicine_labels(medicine_names)
+        # Optionally add a stretch to push items to the top
+        self.left_layout.addStretch()
 
-        self.verticalLayout_8.addWidget(self.line_5)
+        #Create a right Panel
+        self.right_panel=QWidget()
+        self.right_layout=QVBoxLayout(self.right_panel)
+        self.right_panel.setStyleSheet("background-color: #f0f0f0; border-radius: 8px;")
 
-        self.verticalLayout_6 = QVBoxLayout()
-        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.frame_3 = QFrame(self.page_3)
-        self.frame_3.setObjectName(u"frame_3")
-        sizePolicy8 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        sizePolicy8.setHorizontalStretch(0)
-        sizePolicy8.setVerticalStretch(0)
-        sizePolicy8.setHeightForWidth(self.frame_3.sizePolicy().hasHeightForWidth())
-        self.frame_3.setSizePolicy(sizePolicy8)
-        self.frame_3.setMinimumSize(QSize(0, 450))
-        self.frame_3.setStyleSheet(u"QFrame{\n"
-"padding:15px;\n"
-"border:1px solid #C3BABA;\n"
-"border-radius: 10px;\n"
-"}")
-        self.frame_3.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_3.setFrameShadow(QFrame.Shadow.Raised)
-        self.verticalLayout_10 = QVBoxLayout(self.frame_3)
-        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
-        self.extracted_text_label = QLabel(self.frame_3)
-        self.extracted_text_label.setObjectName(u"extracted_text_label")
-        sizePolicy9 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-        sizePolicy9.setHorizontalStretch(0)
-        sizePolicy9.setVerticalStretch(0)
-        sizePolicy9.setHeightForWidth(self.extracted_text_label.sizePolicy().hasHeightForWidth())
-        self.extracted_text_label.setSizePolicy(sizePolicy9)
-        font5 = QFont()
-        font5.setFamilies([u"Berlin Sans FB Demi"])
-        font5.setPointSize(13)
-        font5.setBold(True)
-        self.extracted_text_label.setFont(font5)
-        self.extracted_text_label.setStyleSheet(u"QLabel{\n"
-"color:#6B7075;\n"
-"border:none;\n"
-"}")
-        self.extracted_text_label.setMargin(-15)
+        #Set the size policy for the right panel
+        # self.right_panel.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Preferred)
 
-        self.verticalLayout_10.addWidget(self.extracted_text_label)
+        #Add both the panel to the main widget
+        self.content_layout.addWidget(self.left_panel,35)
+        self.content_layout.addWidget(self.right_panel,65)
 
-        self.display_textedit = QTextEdit(self.frame_3)
-        self.display_textedit.setObjectName(u"display_textedit")
-        font6 = QFont()
-        font6.setFamilies([u"Arial"])
-        font6.setPointSize(14)
-        self.display_textedit.setFont(font6)
-        self.display_textedit.setStyleSheet(u"QTextEdit{\n"
-"background-color:#e3e3e3;\n"
-"border: 1px solid black;\n"
-"border-radius: 5px;\n"
-"}")
+        # Add the content layout to the main page layout
+        self.page_3_layout.addLayout(self.content_layout)
 
-        self.verticalLayout_10.addWidget(self.display_textedit)
+        self.footer_page3=QWidget()
+        self.footer_page3_layout=QVBoxLayout(self.footer_page3)
+        self.footer_page3_layout.setContentsMargins(0,0,0,0)
 
-        self.horizontalLayout_8 = QHBoxLayout()
-        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        self.footer_label= QLabel("Contact Us @: janhavipal353@gmail.com/aujale30@gmail.com")
+        footerfont=QFont()
+        footerfont.setFamilies([u"Berlin Sans FB Demi"])
+        footerfont.setPointSize(9)
 
-        self.horizontalLayout_8.addItem(self.horizontalSpacer_2)
+        self.footer_label.setFont(footerfont)
+        self.footer_label.setStyleSheet("color: #6B7075;")
 
-        self.back_pushbutton = QPushButton(self.frame_3)
-        self.back_pushbutton.setObjectName(u"back_pushbutton")
-        sizePolicy3.setHeightForWidth(self.back_pushbutton.sizePolicy().hasHeightForWidth())
-        self.back_pushbutton.setSizePolicy(sizePolicy3)
-        self.back_pushbutton.setMinimumSize(QSize(90, 0))
-        self.back_pushbutton.setFont(font2)
-        self.back_pushbutton.setStyleSheet(u"QPushButton {\n"
-"    background-color: #9c9c9c;  /* Default button color */\n"
-"    color: white;\n"
-"    border-radius: 10px;\n"
-"    padding: 8px;\n"
-"}\n"
-"\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: rgba(255, 255, 255, 0.3);  /* Soft white glow */\n"
-"    color: #000000;\n"
-"    border: 1px solid #cccccc;\n"
-"}\n"
-"\n"
-"QPushButton::icon{\n"
-"color:white;\n"
-"}")
-        icon1 = QIcon()
-        icon1.addFile(u"resource/back.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.back_pushbutton.setIcon(icon1)
-        self.back_pushbutton.setIconSize(QSize(18, 18))
-        self.back_pushbutton.clicked.connect(self.call_switch_to_page2)
-
-        self.horizontalLayout_8.addWidget(self.back_pushbutton)
-
-        self.copy_pushbutton = QPushButton(self.frame_3)
-        self.copy_pushbutton.setObjectName(u"copy_pushbutton")
-        sizePolicy10 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-        sizePolicy10.setHorizontalStretch(0)
-        sizePolicy10.setVerticalStretch(0)
-        sizePolicy10.setHeightForWidth(self.copy_pushbutton.sizePolicy().hasHeightForWidth())
-        self.copy_pushbutton.setSizePolicy(sizePolicy10)
-        self.copy_pushbutton.setMinimumSize(QSize(90, 0))
-        self.copy_pushbutton.setFont(font2)
-        self.copy_pushbutton.setStyleSheet(u"QPushButton {\n"
-"    background-color: #9c9c9c;  /* Default button color */\n"
-"    color: white;\n"
-"    border-radius: 10px;\n"
-"    padding: 8px;\n"
-"}\n"
-"\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: rgba(255, 255, 255, 0.3);  /* Soft white glow */\n"
-"    color: #000000;\n"
-"    border: 1px solid #cccccc;\n"
-"}")
-        icon2 = QIcon()
-        icon2.addFile(u"resource/copy.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.copy_pushbutton.setIcon(icon2)
-        self.copy_pushbutton.clicked.connect(self.copy_text)
-
-        self.horizontalLayout_8.addWidget(self.copy_pushbutton)
-
-
-        self.verticalLayout_10.addLayout(self.horizontalLayout_8)
-
-
-        self.verticalLayout_6.addWidget(self.frame_3)
-
-
-        self.verticalLayout_8.addLayout(self.verticalLayout_6)
-
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-
-        self.verticalLayout_8.addLayout(self.horizontalLayout_3)
-
-        self.line_7 = QFrame(self.page_3)
-        self.line_7.setObjectName(u"line_7")
-        self.line_7.setFrameShape(QFrame.Shape.HLine)
-        self.line_7.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.verticalLayout_8.addWidget(self.line_7)
-
-
-        self.verticalLayout_7.addLayout(self.verticalLayout_8)
+        self.footer_page3_layout.addWidget(self.footer_label)
+        self.page_3_layout.addWidget(self.footer_page3)
 
         self.stackedWidget.addWidget(self.page_3)
 
@@ -702,28 +589,57 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"TextExtraction OCR", None))
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"RxVision", None))
 #if QT_CONFIG(whatsthis)
         self.centralwidget.setWhatsThis(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>QStackedWidget</p></body></html>", None))
 #endif // QT_CONFIG(whatsthis)
-        self.mainHeading_1.setText(QCoreApplication.translate("MainWindow", u"TextExtractionOCR", None))
+        self.mainHeading_1.setText(QCoreApplication.translate("MainWindow", u"RxVision", None))
         self.tagline.setText(QCoreApplication.translate("MainWindow", u"\"Effortlessly extract text from any image with our advanced OCR technology\"", None))
         self.home_image_2.setText("")
         self.pick_image_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Pick an Image", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"All Rights Reserved", None))
         self.label_2.setText("")
-        self.label.setText(QCoreApplication.translate("MainWindow", u"TextExtraction OCR", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"RxVision", None))
         self.home1_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Home", None))
         self.extractedText_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Extracted text Display", None))
         self.crop_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Crop", None))
         self.confirm_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Confirm Selection", None))
         self.label_contact.setText(QCoreApplication.translate("MainWindow", u"Contact Us @: janhavipal353@gmail.com / aujale30@gmail.com", None))
-        self.label_9.setText("")
-        self.label_8.setText(QCoreApplication.translate("MainWindow", u"TextExtraction OCR", None))
-        self.extracted_text_label.setText(QCoreApplication.translate("MainWindow", u"Extracted Text", None))
-        self.back_pushbutton.setText(QCoreApplication.translate("MainWindow", u" Back", None))
-        self.copy_pushbutton.setText(QCoreApplication.translate("MainWindow", u" Copy", None))
-    # retranslateUi
+
+    def populate_medicine_labels(self,medicine_names):
+        font5 = QFont()
+        font5.setFamilies([u"Calibri"])
+        font5.setPointSize(13)
+        font5.setBold(False)
+        font5.setItalic(False)
+
+        #clear existing labels
+        while self.left_layout.count():
+            item = self.left_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+        #Add medicine label or display no medicine detected
+        if medicine_names:
+            for index,name in enumerate (medicine_names):
+                label= QLabel(f"{index + 1}. {name}")  #Add Numbering
+                label.setFont(font5)
+                label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                label.setStyleSheet("QLabel{background-color: #ffffff; border: 1px solid #cccccc; border-radius:8px; padding:10px}"
+                                    "QLabel:hover{background-color: #cdcece;color:#ffffff}"
+                                    )
+                
+                label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                self.left_layout.addWidget(label)
+        else:
+            no_medicine_label = QLabel("No medicine detected")
+            no_medicine_label.setFont(font5)
+            no_medicine_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            no_medicine_label.setStyleSheet("QLabel{background-color: #ffffff; border: 1px solid #cccccc; border-radius:8px; padding:10px}"
+                                    "QLabel:hover{background-color: #cdcece;color:#ffffff}"
+                                    )
+            no_medicine_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.left_layout.addWidget(no_medicine_label)
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
