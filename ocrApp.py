@@ -11,11 +11,10 @@ from process_and_extract import *
 from process_and_extract import processAndExtract
 from PyQt6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale, QMetaObject, QObject, QPoint, QRect, QSize, QTime, QUrl, Qt, QTimer)
 from PyQt6.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont, QFontDatabase, QGradient, QIcon, QImage, QKeySequence, QLinearGradient, QPainter, QPalette, QPixmap, QRadialGradient, QTransform)
-from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QStackedWidget, QTextEdit, QVBoxLayout, QWidget, QGraphicsDropShadowEffect,QMessageBox)
+from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QStackedWidget, QTextEdit,QScrollArea, QVBoxLayout, QWidget, QGraphicsDropShadowEffect,QMessageBox)
 
 
 class Ui_MainWindow(object):
-
     def call_switch_to_page1(self):
         switch_to_page1(self)  # Pass the MainWindow instance to the function
 
@@ -129,11 +128,6 @@ class Ui_MainWindow(object):
         MainWindow.setStyleSheet(u"QMainWindow{\n"
 "background-color: #FFFFFF\n"
 "}")
-        # shadow_effect= QGraphicsDropShadowEffect()
-        # shadow_effect.setBlurRadius(15)  # How soft the shadow is
-        # shadow_effect.setXOffset(3)      # Horizontal offset
-        # shadow_effect.setYOffset(3)      # Vertical offset
-        # shadow_effect.setColor(QColor(0, 0, 0, 80))  # Color and transparency (RGBA)
 
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
@@ -436,11 +430,8 @@ class Ui_MainWindow(object):
         self.preview_image_label = QLabel(self.preview_frame)
         self.preview_image_label.setObjectName("image_label")
         self.preview_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # self.preview_image_label.setGeometry(10, 10, self.preview_frame.width() - 20, self.preview_frame.height() - 20)
-        # self.preview_image_label.setGeometry(10, 10, self.preview_frame.width() - 20, self.preview_frame.height() - 20)
         self.preview_image_label.setStyleSheet("background-color: #f0f0f0; border-radius: 8px;")  # Optional background color for visibility
         self.preview_image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        # self.preview_image_label.setScaledContents(True)  # Ensures the image scales within the label
         self.preview_image_label.setText("No Image Selected")  # Optional: Set placeholder text
 
         self.preview_layout.addWidget(self.preview_image_label)
@@ -520,7 +511,7 @@ class Ui_MainWindow(object):
         self.page_3.setObjectName(u"page_3")
 
         self.page_3_layout=QVBoxLayout(self.page_3)
-        self.page_3_layout.setSpacing(10)
+        self.page_3_layout.setSpacing(0)
         self.page_3_layout.setContentsMargins(10, 10, 10, 10)
 
         heading_font=QFont()
@@ -533,41 +524,43 @@ class Ui_MainWindow(object):
         self.heading_label = QLabel("RxVision")
         self.heading_label.setFont(heading_font)
         self.heading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.heading_label.setStyleSheet("color: #6B7075;")  # Customize as needed
+        self.heading_label.setStyleSheet("color: #6B7075;")
+        self.heading_label.setFixedHeight(60) #fixed height for the header
         self.page_3_layout.addWidget(self.heading_label)
-        self.heading_label.setMargin(0)
 
         # Create a horizontal layout for left and right panels
         self.content_layout = QHBoxLayout()
 
         #Create a left Panel
+        self.left_scroll_area= QScrollArea()
+        self.left_scroll_area.setWidgetResizable(True)
         self.left_panel=QWidget()
         self.left_layout=QVBoxLayout(self.left_panel)
         self.left_panel.setStyleSheet("background-color: #f0f0f0; border-radius: 8px;")
         self.left_layout.setSpacing(10)
         self.left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # Add Medicine Labels
-        # medicine_names = confirm_selection
-    
-        # self.populate_medicine_labels(medicine_names)
         # Optionally add a stretch to push items to the top
         self.left_layout.addStretch()
+        self.left_panel.setLayout(self.left_layout)
 
         #Create a right Panel
         self.right_panel=QWidget()
         self.right_layout=QVBoxLayout(self.right_panel)
         self.right_panel.setStyleSheet("background-color: #f0f0f0; border-radius: 8px;")
 
-        #Set the size policy for the right panel
-        # self.right_panel.setSizePolicy(QSizePolicy.Policy.Expanding,QSizePolicy.Policy.Preferred)
-
         #Add both the panel to the main widget
         self.content_layout.addWidget(self.left_panel,35)
         self.content_layout.addWidget(self.right_panel,65)
 
+        # Add content layout to a middle widget
+        self.middle_widget = QWidget()
+        self.middle_layout = QVBoxLayout(self.middle_widget)
+        self.middle_layout.setContentsMargins(0, 0, 0, 0)
+        self.middle_layout.addLayout(self.content_layout)
+
         # Add the content layout to the main page layout
-        self.page_3_layout.addLayout(self.content_layout)
+        self.page_3_layout.addWidget(self.middle_widget)
 
         self.footer_page3=QWidget()
         self.footer_page3_layout=QVBoxLayout(self.footer_page3)
@@ -575,14 +568,14 @@ class Ui_MainWindow(object):
 
         self.footer_label= QLabel("Contact Us @: janhavipal353@gmail.com/aujale30@gmail.com")
         footerfont=QFont()
-        footerfont.setFamilies([u"Berlin Sans FB Demi"])
+        footerfont.setFamilies([u"Arial"])
         footerfont.setPointSize(9)
 
         self.footer_label.setFont(footerfont)
         self.footer_label.setStyleSheet("color: #6B7075;")
-
         self.footer_page3_layout.addWidget(self.footer_label)
-        self.page_3_layout.addWidget(self.footer_page3)
+        self.footer_page3.setFixedHeight(50)
+        self.page_3_layout.addWidget(self.footer_page3,0)
 
         self.stackedWidget.addWidget(self.page_3)
 

@@ -236,7 +236,6 @@ def process_image(image_path):
         final_image_path= rotated_image_path
     else:
         print("Rotation not needed, image remains unchanged.\n")
-        final_image_path=dilated_image_path
     
     # Print the final image path before returning
     print("Final image path after preprocessing:", final_image_path)
