@@ -3,6 +3,8 @@
 import sys
 import ctypes
 from open_file_dialog import open_file_dialog
+from error import *
+from check_internet import *
 from switchpages import *
 from crop import open_crop_window
 from process_and_extract import *
@@ -42,31 +44,39 @@ class Ui_MainWindow(object):
         switch_to_page3(self)  #Pass the MainWindow instance to the function
 
     def confirm_selection(self):
-        #Ensure that an image has been selected
-        if hasattr(self, 'selected_image_path') and self.selected_image_path:
-            # Get the image path selected in the file picker
-            image_path = self.selected_image_path #This should be set during Image Selection
+        try:
+                # Check internet connectivity
+                if not check_internet_connection():
+                        QMessageBox.warning(None, "Internet Connection Error", "No internet connection. Please check your network and try again.")
+                        return
+                #Ensure that an image has been selected
+                if hasattr(self, 'selected_image_path') and self.selected_image_path:
+                        # Get the image path selected in the file picker
+                        image_path = self.selected_image_path #This should be set during Image Selection
 
-            #Call the external Function to process the image and extract text
-            extracted_text = processAndExtract(image_path)
+                        #Call the external Function to process the image and extract text
+                        extracted_text = processAndExtract(image_path)
 
-            # If the extracted text is a list, join it into a string
-            if isinstance(extracted_text, list):
-                medicine_names = extracted_text  #already a list of medicines
-            else:
-                medicine_names=extracted_text.split('\n') 
+                        # If the extracted text is a list, join it into a string
+                        if isinstance(extracted_text, list):
+                                medicine_names = extracted_text  #already a list of medicines
+                        else:
+                                medicine_names=extracted_text.split('\n') 
 
-            # Populate medicine labels in the left layout (page 3)
-            self.populate_medicine_labels(medicine_names)
+                        # Populate medicine labels in the left layout (page 3)
+                        self.populate_medicine_labels(medicine_names)
 
-            # Display extracted text in page3 (QTextEdit)
-            # self.display_textedit.setPlainText(extracted_text)
+                        # Display extracted text in page3 (QTextEdit)
+                        # self.display_textedit.setPlainText(extracted_text)
 
-            # Switch to page 3 to show the extracted text
-            self.stackedWidget.setCurrentIndex(2)
-        else:
-            # Handle the case where no image was selected (optional)
-            QMessageBox.warning(self, "No Image Selected", "Please select an image first.")  
+                        # Switch to page 3 to show the extracted text
+                        self.stackedWidget.setCurrentIndex(2)
+                else:
+                # Handle the case where no image was selected (optional)
+                        QMessageBox.warning(self, "No Image Selected", "Please select an image first.")  
+        except Exception as e:
+            # Catch all other unexpected errors and display an error message
+            QMessageBox.critical(None, "Error", f"An unexpected error occurred: {str(e)}")
     
 
     def show_copied_popup(self):
