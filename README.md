@@ -45,11 +45,11 @@ pip install -r requirements.txt
 
 - Run the application:
   ```bash
-  python main.py
+  python ocrApp.py
   ```
 
 - Adjust settings in `config.json` for language, output format, etc.
-
+- Make sure to get the cloud vision api key's, and update the placeholders in the client_secret_code.json file.
 ---
 
 ### Option 2: Using the `.zip` File
