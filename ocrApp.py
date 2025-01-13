@@ -3,16 +3,37 @@
 import sys
 import ctypes
 from open_file_dialog import open_file_dialog
+from error import *
+from check_internet import *
 from switchpages import *
 from crop import open_crop_window
+from process_and_extract import *
 from process_and_extract import processAndExtract
-from PyQt6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale, QMetaObject, QObject, QPoint, QRect, QSize, QTime, QUrl, Qt, QTimer)
+from PyQt6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale, QMetaObject, QObject, QPoint, QRect, QSize, QTime, QUrl, Qt, QTimer, pyqtSignal)
 from PyQt6.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont, QFontDatabase, QGradient, QIcon, QImage, QKeySequence, QLinearGradient, QPainter, QPalette, QPixmap, QRadialGradient, QTransform)
-from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QStackedWidget, QTextEdit, QVBoxLayout, QWidget, QGraphicsDropShadowEffect)
+from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QStackedWidget, QTextEdit,QScrollArea, QVBoxLayout, QWidget, QGraphicsDropShadowEffect,QMessageBox)
 
+#Class to make the label Clickable like a button to call the API
+class clickableLabel(QLabel):
+
+    #customise signal to emit when label is clicked
+    label_clicked_signal=pyqtSignal(dict)
+
+    def __init__(self,text, parent=None):
+        super().__init__(text,parent)
+        self.setStyleSheet("text-align: left; padding: 5px; font-size: 14px; cursor: pointer;")
+        self.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.label_clicked()
+
+    def label_clicked(self):
+        # Emit the signal with the associated data
+        if self.data:
+            self.label_clicked_signal.emit(self.data)
 
 class Ui_MainWindow(object):
-
     def call_switch_to_page1(self):
         switch_to_page1(self)  # Pass the MainWindow instance to the function
 
@@ -23,26 +44,39 @@ class Ui_MainWindow(object):
         switch_to_page3(self)  #Pass the MainWindow instance to the function
 
     def confirm_selection(self):
-        #Ensure that an image has been selected
-        if hasattr(self, 'selected_image_path') and self.selected_image_path:
-            # Get the image path selected in the file picker
-            image_path = self.selected_image_path #This should be set during Image Selection
+        try:
+                # Check internet connectivity
+                if not check_internet_connection():
+                        QMessageBox.warning(None, "Internet Connection Error", "No internet connection. Please check your network and try again.")
+                        return
+                #Ensure that an image has been selected
+                if hasattr(self, 'selected_image_path') and self.selected_image_path:
+                        # Get the image path selected in the file picker
+                        image_path = self.selected_image_path #This should be set during Image Selection
 
-            #Call the external Function to process the image and extract text
-            extracted_text = processAndExtract(image_path)
+                        #Call the external Function to process the image and extract text
+                        extracted_text = processAndExtract(image_path)
 
-            # If the extracted text is a list, join it into a string
-            if isinstance(extracted_text, list):
-                extracted_text = '\n'.join(extracted_text)  # Join the list with newlines for display
+                        # If the extracted text is a list, join it into a string
+                        if isinstance(extracted_text, list):
+                                medicine_names = extracted_text  #already a list of medicines
+                        else:
+                                medicine_names=extracted_text.split('\n') 
 
-            # Display extracted text in page3 (QTextEdit)
-            self.display_textedit.setPlainText(extracted_text)
+                        # Populate medicine labels in the left layout (page 3)
+                        self.populate_medicine_labels(medicine_names)
 
-            # Switch to page 3 to show the extracted text
-            self.stackedWidget.setCurrentIndex(2)
-        else:
-            # Handle the case where no image was selected (optional)
-            QMessageBox.warning(self, "No Image Selected", "Please select an image first.")  
+                        # Display extracted text in page3 (QTextEdit)
+                        # self.display_textedit.setPlainText(extracted_text)
+
+                        # Switch to page 3 to show the extracted text
+                        self.stackedWidget.setCurrentIndex(2)
+                else:
+                # Handle the case where no image was selected (optional)
+                        QMessageBox.warning(self, "No Image Selected", "Please select an image first.")  
+        except Exception as e:
+            # Catch all other unexpected errors and display an error message
+            QMessageBox.critical(None, "Error", f"An unexpected error occurred: {str(e)}")
     
 
     def show_copied_popup(self):
@@ -98,7 +132,22 @@ class Ui_MainWindow(object):
                 # Handle the case where no image was selected
             QMessageBox.warning(self, "No Image Selected", "Please select an image first.")
 
+    def update_right_panel(self, data):
+        #Update Name
+        self.name_label.setText(data.get("name", "Name not available"))
 
+        #Update composition
+        self.Composition_label.setText(f"Composition: {data.get('composition1', ' Not Available')}")
+
+        # Update Manufacturer
+        self.manufacturer_label.setText(f"Manufacturer: {data.get('manufacturer_name', ' Not Available')}")
+        
+        # Update Description
+        usage_info = data.get("usage1", "\nNo description available.")
+        # Format the usage description (if it's a list, convert to a string)
+        if isinstance(usage_info, list):
+            usage_info = "\n".join(usage_info)
+        self.description_widget.setText(f"Description:\n{usage_info}")
 
 
     def setupUi(self, MainWindow):
@@ -113,11 +162,6 @@ class Ui_MainWindow(object):
         MainWindow.setStyleSheet(u"QMainWindow{\n"
 "background-color: #FFFFFF\n"
 "}")
-        # shadow_effect= QGraphicsDropShadowEffect()
-        # shadow_effect.setBlurRadius(15)  # How soft the shadow is
-        # shadow_effect.setXOffset(3)      # Horizontal offset
-        # shadow_effect.setYOffset(3)      # Vertical offset
-        # shadow_effect.setColor(QColor(0, 0, 0, 80))  # Color and transparency (RGBA)
 
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
@@ -190,7 +234,7 @@ class Ui_MainWindow(object):
         sizePolicy2.setVerticalStretch(0)
         sizePolicy2.setHeightForWidth(self.home_image_2.sizePolicy().hasHeightForWidth())
         self.home_image_2.setSizePolicy(sizePolicy2)
-        self.home_image_2.setPixmap(QPixmap(r"C:\Users\aujal\OneDrive\Desktop\ocr prescription reader\OCR-Prescription-Reader\gui\resource\home_image.png"))
+        self.home_image_2.setPixmap(QPixmap(r"resource\home_image.png"))
         self.home_image_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.verticalLayout_2.addWidget(self.home_image_2)
@@ -420,11 +464,8 @@ class Ui_MainWindow(object):
         self.preview_image_label = QLabel(self.preview_frame)
         self.preview_image_label.setObjectName("image_label")
         self.preview_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        # self.preview_image_label.setGeometry(10, 10, self.preview_frame.width() - 20, self.preview_frame.height() - 20)
-        # self.preview_image_label.setGeometry(10, 10, self.preview_frame.width() - 20, self.preview_frame.height() - 20)
         self.preview_image_label.setStyleSheet("background-color: #f0f0f0; border-radius: 8px;")  # Optional background color for visibility
         self.preview_image_label.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        # self.preview_image_label.setScaledContents(True)  # Ensures the image scales within the label
         self.preview_image_label.setText("No Image Selected")  # Optional: Set placeholder text
 
         self.preview_layout.addWidget(self.preview_image_label)
@@ -498,194 +539,139 @@ class Ui_MainWindow(object):
 
 
         self.verticalLayout_5.addLayout(self.verticalLayout)
-
         self.stackedWidget.addWidget(self.page_2)
+        
         self.page_3 = QWidget()
         self.page_3.setObjectName(u"page_3")
-        self.verticalLayout_7 = QVBoxLayout(self.page_3)
-        self.verticalLayout_7.setObjectName(u"verticalLayout_7")
-        self.verticalLayout_8 = QVBoxLayout()
-        self.verticalLayout_8.setObjectName(u"verticalLayout_8")
-        self.verticalLayout_8.setContentsMargins(40, 20, 40, 20)
-        self.horizontalLayout = QHBoxLayout()
-        self.horizontalLayout.setObjectName(u"horizontalLayout")
-        self.horizontalLayout.setContentsMargins(-1, -1, -1, 20)
-        self.label_9 = QLabel(self.page_3)
-        self.label_9.setObjectName(u"label_9")
-        sizePolicy3.setHeightForWidth(self.label_9.sizePolicy().hasHeightForWidth())
-        self.label_9.setSizePolicy(sizePolicy3)
-        self.label_9.setMaximumSize(QSize(40, 40))
-        self.label_9.setPixmap(QPixmap(u"resource/fileicon.png"))
-        self.label_9.setScaledContents(True)
 
-        self.horizontalLayout.addWidget(self.label_9)
+        self.page_3_layout=QVBoxLayout(self.page_3)
+        self.page_3_layout.setSpacing(0)
+        self.page_3_layout.setContentsMargins(10, 10, 10, 10)
 
-        self.label_8 = QLabel(self.page_3)
-        self.label_8.setObjectName(u"label_8")
-        sizePolicy7 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
-        sizePolicy7.setHorizontalStretch(0)
-        sizePolicy7.setVerticalStretch(0)
-        sizePolicy7.setHeightForWidth(self.label_8.sizePolicy().hasHeightForWidth())
-        self.label_8.setSizePolicy(sizePolicy7)
-        self.label_8.setFont(font3)
-        self.label_8.setStyleSheet(u"QLabel{\n"
-"color:#6B7075;\n"
-"}")
+        heading_font=QFont()
+        heading_font.setFamilies([u"Berlin Sans FB Demi"])
+        heading_font.setPointSize(33)
+        heading_font.setBold(True)
+        heading_font.setItalic(False)
 
-        self.horizontalLayout.addWidget(self.label_8)
+        # Create and configure the heading label
+        self.heading_label = QLabel("RxVision")
+        self.heading_label.setFont(heading_font)
+        self.heading_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.heading_label.setStyleSheet("color: #6B7075;")
+        self.heading_label.setFixedHeight(60) #fixed height for the header
+        self.page_3_layout.addWidget(self.heading_label)
 
+        # Create a horizontal layout for left and right panels
+        self.content_layout = QHBoxLayout()
 
-        self.verticalLayout_8.addLayout(self.horizontalLayout)
+        #Create a left Panel
+        self.left_scroll_area= QScrollArea()
+        self.left_scroll_area.setWidgetResizable(True)
+        self.left_panel=QWidget()
+        self.left_layout=QVBoxLayout(self.left_panel)
+        self.left_panel.setStyleSheet("background-color: #bcbcbc; border-radius: 8px;")
+        self.left_layout.setSpacing(10)
+        self.left_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        self.line_5 = QFrame(self.page_3)
-        self.line_5.setObjectName(u"line_5")
-        self.line_5.setFrameShape(QFrame.Shape.HLine)
-        self.line_5.setFrameShadow(QFrame.Shadow.Sunken)
+        # Optionally add a stretch to push items to the top
+        self.left_layout.addStretch()
+        self.left_panel.setLayout(self.left_layout)
 
-        self.verticalLayout_8.addWidget(self.line_5)
+        #Create a right Panel
+        self.right_panel=QWidget()
+        self.right_layout=QVBoxLayout(self.right_panel)
+        self.right_panel.setStyleSheet("background-color: #bcbcbc; border-radius: 8px;")
+        self.right_layout.setSpacing(10)
+        self.right_layout.setContentsMargins(10,10,10,10)
 
-        self.verticalLayout_6 = QVBoxLayout()
-        self.verticalLayout_6.setObjectName(u"verticalLayout_6")
-        self.frame_3 = QFrame(self.page_3)
-        self.frame_3.setObjectName(u"frame_3")
-        sizePolicy8 = QSizePolicy(QSizePolicy.Policy.Preferred, QSizePolicy.Policy.Expanding)
-        sizePolicy8.setHorizontalStretch(0)
-        sizePolicy8.setVerticalStretch(0)
-        sizePolicy8.setHeightForWidth(self.frame_3.sizePolicy().hasHeightForWidth())
-        self.frame_3.setSizePolicy(sizePolicy8)
-        self.frame_3.setMinimumSize(QSize(0, 450))
-        self.frame_3.setStyleSheet(u"QFrame{\n"
-"padding:15px;\n"
-"border:1px solid #C3BABA;\n"
-"border-radius: 10px;\n"
-"}")
-        self.frame_3.setFrameShape(QFrame.Shape.StyledPanel)
-        self.frame_3.setFrameShadow(QFrame.Shadow.Raised)
-        self.verticalLayout_10 = QVBoxLayout(self.frame_3)
-        self.verticalLayout_10.setObjectName(u"verticalLayout_10")
-        self.extracted_text_label = QLabel(self.frame_3)
-        self.extracted_text_label.setObjectName(u"extracted_text_label")
-        sizePolicy9 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Minimum)
-        sizePolicy9.setHorizontalStretch(0)
-        sizePolicy9.setVerticalStretch(0)
-        sizePolicy9.setHeightForWidth(self.extracted_text_label.sizePolicy().hasHeightForWidth())
-        self.extracted_text_label.setSizePolicy(sizePolicy9)
-        font5 = QFont()
-        font5.setFamilies([u"Berlin Sans FB Demi"])
-        font5.setPointSize(13)
-        font5.setBold(True)
-        self.extracted_text_label.setFont(font5)
-        self.extracted_text_label.setStyleSheet(u"QLabel{\n"
-"color:#6B7075;\n"
-"border:none;\n"
-"}")
-        self.extracted_text_label.setMargin(-15)
+        # Create a shadow effect
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setBlurRadius(10)
+        shadow_effect.setXOffset(0)
+        shadow_effect.setYOffset(5)
+        shadow_effect.setColor(QColor(0,0,0,90))  # black
 
-        self.verticalLayout_10.addWidget(self.extracted_text_label)
+        medicine_name_heading_font=QFont()
+        medicine_name_heading_font.setFamilies([u"Playfair"])
+        medicine_name_heading_font.setBold(True)
+        medicine_name_heading_font.setPointSize(19)
 
-        self.display_textedit = QTextEdit(self.frame_3)
-        self.display_textedit.setObjectName(u"display_textedit")
-        font6 = QFont()
-        font6.setFamilies([u"Arial"])
-        font6.setPointSize(14)
-        self.display_textedit.setFont(font6)
-        self.display_textedit.setStyleSheet(u"QTextEdit{\n"
-"background-color:#e3e3e3;\n"
-"border: 1px solid black;\n"
-"border-radius: 5px;\n"
-"}")
+        manufacturer_label=QFont()
+        manufacturer_label.setFamilies([u"Arial"])
+        manufacturer_label.setBold(True)
+        manufacturer_label.setPointSize(10)
 
-        self.verticalLayout_10.addWidget(self.display_textedit)
+        composition_label=QFont()
+        composition_label.setFamilies([u"Arial"])
+        composition_label.setBold(True)
+        composition_label.setPointSize(10)
 
-        self.horizontalLayout_8 = QHBoxLayout()
-        self.horizontalLayout_8.setObjectName(u"horizontalLayout_8")
-        self.horizontalSpacer_2 = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        description_label=QFont()
+        description_label.setFamilies([u"Arial"])
+        description_label.setBold(True)
+        description_label.setPointSize(10)
 
-        self.horizontalLayout_8.addItem(self.horizontalSpacer_2)
+        #Name Heading Section
+        self.name_label=QLabel("Name")
+        self.name_label.setFont(medicine_name_heading_font)
+        self.name_label.setStyleSheet("background-color: #bcbcbc; padding: 10px; border-radius: 5px;")
+        self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+        self.name_label.setGraphicsEffect(shadow_effect)
+        self.right_layout.addWidget(self.name_label)
 
-        self.back_pushbutton = QPushButton(self.frame_3)
-        self.back_pushbutton.setObjectName(u"back_pushbutton")
-        sizePolicy3.setHeightForWidth(self.back_pushbutton.sizePolicy().hasHeightForWidth())
-        self.back_pushbutton.setSizePolicy(sizePolicy3)
-        self.back_pushbutton.setMinimumSize(QSize(90, 0))
-        self.back_pushbutton.setFont(font2)
-        self.back_pushbutton.setStyleSheet(u"QPushButton {\n"
-"    background-color: #9c9c9c;  /* Default button color */\n"
-"    color: white;\n"
-"    border-radius: 10px;\n"
-"    padding: 8px;\n"
-"}\n"
-"\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: rgba(255, 255, 255, 0.3);  /* Soft white glow */\n"
-"    color: #000000;\n"
-"    border: 1px solid #cccccc;\n"
-"}\n"
-"\n"
-"QPushButton::icon{\n"
-"color:white;\n"
-"}")
-        icon1 = QIcon()
-        icon1.addFile(u"resource/back.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.back_pushbutton.setIcon(icon1)
-        self.back_pushbutton.setIconSize(QSize(18, 18))
-        self.back_pushbutton.clicked.connect(self.call_switch_to_page2)
+        #Composition name section
+        self.Composition_label=QLabel("Composition: ")
+        self.Composition_label.setFont(composition_label)
+        self.Composition_label.setStyleSheet("background-color: #e0e0e0; padding: 10px; border-radius: 5px;")
+        self.Composition_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.right_layout.addWidget(self.Composition_label)
 
-        self.horizontalLayout_8.addWidget(self.back_pushbutton)
+        #Manufacturer name section
+        self.manufacturer_label=QLabel("Manufacturer: ")
+        self.manufacturer_label.setFont(manufacturer_label)
+        self.manufacturer_label.setStyleSheet("background-color: #e0e0e0; padding: 10px; border-radius: 5px;")
+        self.manufacturer_label.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.right_layout.addWidget(self.manufacturer_label)
 
-        self.copy_pushbutton = QPushButton(self.frame_3)
-        self.copy_pushbutton.setObjectName(u"copy_pushbutton")
-        sizePolicy10 = QSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-        sizePolicy10.setHorizontalStretch(0)
-        sizePolicy10.setVerticalStretch(0)
-        sizePolicy10.setHeightForWidth(self.copy_pushbutton.sizePolicy().hasHeightForWidth())
-        self.copy_pushbutton.setSizePolicy(sizePolicy10)
-        self.copy_pushbutton.setMinimumSize(QSize(90, 0))
-        self.copy_pushbutton.setFont(font2)
-        self.copy_pushbutton.setStyleSheet(u"QPushButton {\n"
-"    background-color: #9c9c9c;  /* Default button color */\n"
-"    color: white;\n"
-"    border-radius: 10px;\n"
-"    padding: 8px;\n"
-"}\n"
-"\n"
-"\n"
-"QPushButton:hover {\n"
-"    background-color: rgba(255, 255, 255, 0.3);  /* Soft white glow */\n"
-"    color: #000000;\n"
-"    border: 1px solid #cccccc;\n"
-"}")
-        icon2 = QIcon()
-        icon2.addFile(u"resource/copy.svg", QSize(), QIcon.Mode.Normal, QIcon.State.Off)
-        self.copy_pushbutton.setIcon(icon2)
-        self.copy_pushbutton.clicked.connect(self.copy_text)
+        # Description Section (Scrollable)
+        self.description_area = QScrollArea()
+        self.description_area.setWidgetResizable(True)
+        self.description_widget = QLabel("Description: ")  # Example description
+        self.description_widget.setFont(description_label)
+        self.description_widget.setStyleSheet("background-color: #e0e0e0; border: 1px solid #cccccc; padding: 10px; border-radius: 5px;")
+        self.description_widget.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.description_widget.setWordWrap(True)
+        self.description_area.setWidget(self.description_widget)
+        self.right_layout.addWidget(self.description_area)
 
-        self.horizontalLayout_8.addWidget(self.copy_pushbutton)
+        #Add both the panel to the main widget
+        self.content_layout.addWidget(self.left_panel,35)
+        self.content_layout.addWidget(self.right_panel,65)
 
+        # Add content layout to a middle widget
+        self.middle_widget = QWidget()
+        self.middle_layout = QVBoxLayout(self.middle_widget)
+        self.middle_layout.setContentsMargins(0, 0, 0, 0)
+        self.middle_layout.addLayout(self.content_layout)
 
-        self.verticalLayout_10.addLayout(self.horizontalLayout_8)
+        # Add the content layout to the main page layout
+        self.page_3_layout.addWidget(self.middle_widget)
+        self.footer_page3=QWidget()
+        self.footer_page3_layout=QVBoxLayout(self.footer_page3)
+        self.footer_page3_layout.setContentsMargins(0,0,0,0)
 
+        self.footer_label= QLabel("Contact Us @: janhavipal353@gmail.com/aujale30@gmail.com")
+        footerfont=QFont()
+        footerfont.setFamilies([u"Arial"])
+        footerfont.setPointSize(9)
 
-        self.verticalLayout_6.addWidget(self.frame_3)
-
-
-        self.verticalLayout_8.addLayout(self.verticalLayout_6)
-
-        self.horizontalLayout_3 = QHBoxLayout()
-        self.horizontalLayout_3.setObjectName(u"horizontalLayout_3")
-
-        self.verticalLayout_8.addLayout(self.horizontalLayout_3)
-
-        self.line_7 = QFrame(self.page_3)
-        self.line_7.setObjectName(u"line_7")
-        self.line_7.setFrameShape(QFrame.Shape.HLine)
-        self.line_7.setFrameShadow(QFrame.Shadow.Sunken)
-
-        self.verticalLayout_8.addWidget(self.line_7)
-
-
-        self.verticalLayout_7.addLayout(self.verticalLayout_8)
+        self.footer_label.setFont(footerfont)
+        self.footer_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.footer_label.setStyleSheet("color: #6B7075;")
+        self.footer_page3_layout.addWidget(self.footer_label)
+        self.footer_page3.setFixedHeight(50)
+        self.page_3_layout.addWidget(self.footer_page3,0)
 
         self.stackedWidget.addWidget(self.page_3)
 
@@ -702,28 +688,60 @@ class Ui_MainWindow(object):
     # setupUi
 
     def retranslateUi(self, MainWindow):
-        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"TextExtraction OCR", None))
-#if QT_CONFIG(whatsthis)
+        MainWindow.setWindowTitle(QCoreApplication.translate("MainWindow", u"RxVision", None))
+        #if QT_CONFIG(whatsthis)
         self.centralwidget.setWhatsThis(QCoreApplication.translate("MainWindow", u"<html><head/><body><p>QStackedWidget</p></body></html>", None))
-#endif // QT_CONFIG(whatsthis)
-        self.mainHeading_1.setText(QCoreApplication.translate("MainWindow", u"TextExtractionOCR", None))
+        #endif // QT_CONFIG(whatsthis)
+        self.mainHeading_1.setText(QCoreApplication.translate("MainWindow", u"RxVision", None))
         self.tagline.setText(QCoreApplication.translate("MainWindow", u"\"Effortlessly extract text from any image with our advanced OCR technology\"", None))
         self.home_image_2.setText("")
         self.pick_image_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Pick an Image", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"All Rights Reserved", None))
         self.label_2.setText("")
-        self.label.setText(QCoreApplication.translate("MainWindow", u"TextExtraction OCR", None))
+        self.label.setText(QCoreApplication.translate("MainWindow", u"RxVision", None))
         self.home1_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Home", None))
         self.extractedText_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Extracted text Display", None))
         self.crop_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Crop", None))
         self.confirm_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Confirm Selection", None))
         self.label_contact.setText(QCoreApplication.translate("MainWindow", u"Contact Us @: janhavipal353@gmail.com / aujale30@gmail.com", None))
-        self.label_9.setText("")
-        self.label_8.setText(QCoreApplication.translate("MainWindow", u"TextExtraction OCR", None))
-        self.extracted_text_label.setText(QCoreApplication.translate("MainWindow", u"Extracted Text", None))
-        self.back_pushbutton.setText(QCoreApplication.translate("MainWindow", u" Back", None))
-        self.copy_pushbutton.setText(QCoreApplication.translate("MainWindow", u" Copy", None))
-    # retranslateUi
+
+    def populate_medicine_labels(self,medicine_names):
+        font5 = QFont()
+        font5.setFamilies([u"Calibri"])
+        font5.setPointSize(12)
+        font5.setBold(True)
+        
+        #clear existing labels
+        while self.left_layout.count():
+            item = self.left_layout.takeAt(0)
+            widget = item.widget()
+            if widget:
+                widget.deleteLater()
+        #Add medicine label or display no medicine detected
+        if medicine_names:
+            for index,name in enumerate (medicine_names):
+                display_name= f"{index+1}. {name}"
+                # name=data.get("name", f"Medicine {index + 1}")  # Default to 'Medicine X' if name is missing
+                label= clickableLabel(display_name)  #Add Numbering
+                label.setFont(font5)
+                label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                label.setStyleSheet("QLabel{background-color: #e0e0e0; border: 1px solid #cccccc; border-radius:8px; padding:10px}"
+                                    "QLabel:hover{background-color: #F4F4F9;color:#11111}"
+                                    )
+                
+                label.setAlignment(Qt.AlignmentFlag.AlignLeft)
+                label.label_clicked = lambda name=name: self.update_right_panel({"name":name})  # Pass data to the right panel
+                self.left_layout.addWidget(label)
+        else:
+            no_medicine_label = QLabel("No medicine detected")
+            no_medicine_label.setFont(font5)
+            no_medicine_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            no_medicine_label.setStyleSheet("QLabel{background-color: #e0e0e0; border: 1px solid #cccccc; border-radius:8px; padding:10px}"
+                                    "QLabel:hover{background-color: #cdcece;color:#e0e0e0}"
+                                    )
+            no_medicine_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            self.left_layout.addWidget(no_medicine_label)
+
 
 class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):

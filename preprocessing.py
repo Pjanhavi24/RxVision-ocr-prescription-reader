@@ -155,6 +155,8 @@ def overlay_edges_on_original(original_image, edges):
 
 
 def process_image(image_path):
+    final_image_path=image_path
+
     """Process the image by applying all functions."""
     create_temp_directory()
     img = load_image(image_path)
@@ -165,45 +167,63 @@ def process_image(image_path):
     inverted_image = invert_image(img)
     cv2.imwrite("temp/inverted.jpg", inverted_image)
     print("Inverted image saved as: temp/inverted.jpg\n")
+    inverted_image_path="temp/inverted.jpg"
+    final_image_path=inverted_image_path
 
     # Step 2: Grayscale
     gray_image = grayscale(img)
     cv2.imwrite("temp/gray.jpg", gray_image)
     print("Grayscale image saved as: temp/gray.jpg\n")
+    grayscale_image_path= "temp/gray.jpg"
+    final_image_path=grayscale_image_path
+
 
     # Step 3: Binarization
     binary_image = binarize(gray_image)
     cv2.imwrite("temp/bw_image.jpg", binary_image)
     print("Binary image saved as: temp/bw_image.jpg\n")
-    
+    binary_image_path= "temp/bw_image.jpg"
+    final_image_path=binary_image_path
+
     # Step 4: Edge Detection
     edge_detected_image = detect_edges(gray_image)  # Edge detection on the grayscale image
     cv2.imwrite("temp/edge_detected_image.jpg", edge_detected_image)
     print("Edge detected image saved as: temp/edge_detected_image.jpg\n")
+    edge_detectedImage_path= "temp/edge_detected_image.jpg"
+    final_image_path=edge_detectedImage_path
 
     # Step 5: Overlay
     overlaid_image = overlay_edges_on_original(img, edge_detected_image)
     cv2.imwrite("temp/edge_overlay_image.jpg", overlaid_image)
     print("Image with edge overlay saved as: temp/edge_overlay_image.jpg\n")
+    overlaid_image_path= "temp/edge_overlay_image.jpg"
+    final_image_path=overlaid_image_path
 
     # Step 6: Noise Removal
     no_noise = noise_removal(binary_image)
     cv2.imwrite("temp/no_noise.jpg", no_noise)
     print("Noise removed image saved as: temp/no_noise.jpg\n")
+    noiseremoved_path= "temp/no_noise.jpg"
+    final_image_path=noiseremoved_path
 
     # Step 7: Erode Image
-    eroded_image, eroded_applied = apply_dynamic_erosion(no_noise)
-    if eroded_applied:  # Save only if erosion was applied
-        cv2.imwrite("temp/eroded_image.jpg", eroded_image)
-        print("Eroded image saved as: temp/eroded_image.jpg\n")
+    erosion_needed = np.mean(no_noise) < 120  
+    if erosion_needed:
+        eroded_image_path = "temp/eroded_image.jpg"
+        # Logic for erosion here
+        print(f"Eroded image saved as: {eroded_image_path}")
+        final_image_path = eroded_image_path  # Update final path
     else:
-        print("Erosion not needed, skipping saving eroded image.\n")
+        print("Skipping erosion, the image seems fine.")
 
     # Step 8: Dilate Image
+    dilation_needed=np.mean(no_noise)>150
     dilated_image, dilation_applied = apply_dynamic_dilation(no_noise)
     if dilation_applied:  # Save only if dilation was applied
         cv2.imwrite("temp/dilated_image.jpg", dilated_image)
         print("Dilated image saved as: temp/dilated_image.jpg\n")
+        dilated_image_path= "temp/dilated_image.jpg"
+        final_image_path=dilated_image_path
     else:
         print("Dilation not needed, skipping saving dilated image.\n")
 
@@ -212,8 +232,18 @@ def process_image(image_path):
     if rotated_image is not img:  # Save only if rotation was applied
         cv2.imwrite("temp/rotated_image.jpg", rotated_image)
         print("Image rotated and saved as: temp/rotated_image.jpg\n")
+        rotated_image_path="temp/rotated_image.jpg"
+        final_image_path= rotated_image_path
     else:
         print("Rotation not needed, image remains unchanged.\n")
+    
+    # Print the final image path before returning
+    print("Final image path after preprocessing:", final_image_path)
+
+    return final_image_path
+        
+
+    
 
     # # Step 9: Deskewing
     # fixed = deskew(img)
