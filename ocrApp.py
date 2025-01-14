@@ -3,7 +3,8 @@
 import sys
 import ctypes
 from open_file_dialog import open_file_dialog
-from error import *
+# from error import *
+from api_handler import get_medicine_data
 from check_internet import *
 from switchpages import *
 from crop import open_crop_window
@@ -148,6 +149,24 @@ class Ui_MainWindow(object):
         if isinstance(usage_info, list):
             usage_info = "\n".join(usage_info)
         self.description_widget.setText(f"Description:\n{usage_info}")
+
+    def fetch_medicine_data(self,medicine_name):
+        """
+    Fetches data for the selected medicine using the API and updates the right panel.
+    Args:
+        medicine_name (str): The name of the selected medicine.
+    """
+        try:
+            data=get_medicine_data(medicine_name)
+            # Ensure data is a non-empty list
+            if isinstance(data, list) and len(data) > 0:
+                medicine_info=data[0] # Get the first item from the list
+            else:
+                medicine_info= {"name": "Unknown", "details":"No details available"}
+            self.update_right_panel(medicine_info)
+        except Exception as e:
+            print(f"Error fetching medicine data")
+             
 
 
     def setupUi(self, MainWindow):
@@ -730,7 +749,7 @@ class Ui_MainWindow(object):
                                     )
                 
                 label.setAlignment(Qt.AlignmentFlag.AlignLeft)
-                label.label_clicked = lambda name=name: self.update_right_panel({"name":name})  # Pass data to the right panel
+                label.label_clicked = lambda name=name: self.fetch_medicine_data(name)  # Pass data to the right panel
                 self.left_layout.addWidget(label)
         else:
             no_medicine_label = QLabel("No medicine detected")
