@@ -8,9 +8,10 @@ from api_handler import get_medicine_data
 from check_internet import *
 from switchpages import *
 from crop import open_crop_window
+from loading import LoadingPage
 from process_and_extract import *
 from process_and_extract import processAndExtract
-from PyQt6.QtCore import (QCoreApplication, QDate, QDateTime, QLocale, QMetaObject, QObject, QPoint, QRect, QSize, QTime, QUrl, Qt, QTimer, pyqtSignal)
+from PyQt6.QtCore import (QCoreApplication,QThread, QDate, QDateTime, QLocale, QMetaObject, QObject, QPoint, QRect, QSize, QTime, QUrl, Qt, QTimer, pyqtSignal)
 from PyQt6.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont, QFontDatabase, QGradient, QIcon, QImage, QKeySequence, QLinearGradient, QPainter, QPalette, QPixmap, QRadialGradient, QTransform)
 from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QStackedWidget, QTextEdit,QScrollArea, QVBoxLayout, QWidget, QGraphicsDropShadowEffect,QMessageBox)
 
@@ -34,6 +35,26 @@ class clickableLabel(QLabel):
         if self.data:
             self.label_clicked_signal.emit(self.data)
 
+class ProcessWorker(QThread):
+    processing_done= pyqtSignal(list) # Signal to send the result back to the main thread
+    processing_error= pyqtSignal(str) # Signal to handle error
+
+    def __init__(self, image_path):
+         super().__init__()
+         self.image_path=image_path
+
+    def run(self):
+        try:
+            # Call the external function to process the image and extract text
+            extracted_text= processAndExtract(self.image_path)
+            # If the extracted text is a list, send it directly
+            if isinstance(extracted_text, list):
+                self.processing_done.emit(extracted_text)
+            else:
+                self.processing_done.emit(extracted_text.split('\n'))
+        except Exception as e:
+            self.processing_error.emit(str(e))
+
 class Ui_MainWindow(object):
     def call_switch_to_page1(self):
         switch_to_page1(self)  # Pass the MainWindow instance to the function
@@ -44,40 +65,93 @@ class Ui_MainWindow(object):
     def call_switch_to_page3(self):
         switch_to_page3(self)  #Pass the MainWindow instance to the function
 
+
+    def on_processing_done(self,medicine_names):
+        # Populate medicine labels in the left layout (page 3)
+        self.populate_medicine_labels(medicine_names)
+
+        # Close the loading page
+        self.loading_page.hide()
+
+        # Switch to page 3 to show the extracted text
+        self.stackedWidget.setCurrentIndex(2)
+
+        #clean up the worker
+        self.worker.deleteLater()
+
+    def on_processing_error(self,error_message):
+        # Display the error message
+        QMessageBox.critical(None, "Error", f"An error occurred: {error_message}")
+
+        # Close the loading page
+        self.loading_page.hide()
+
+        #clean up the worker
+        self.worker.deleteLater()
+
+
     def confirm_selection(self):
         try:
+                #Show the loading screen
+                # self.loading_page.setGeometry(0, 0, self.width(), self.height())
+                # self.loading_page.show()
+                # self.loading_page.raise_()
+                # self.loading_page.update()
+
+                self.loading_page.show_loading()
+                
                 # Check internet connectivity
                 if not check_internet_connection():
                         QMessageBox.warning(None, "Internet Connection Error", "No internet connection. Please check your network and try again.")
+                        self.loading_page.hide()
                         return
+                
                 #Ensure that an image has been selected
                 if hasattr(self, 'selected_image_path') and self.selected_image_path:
                         # Get the image path selected in the file picker
                         image_path = self.selected_image_path #This should be set during Image Selection
 
-                        #Call the external Function to process the image and extract text
-                        extracted_text = processAndExtract(image_path)
+
+                        # #Call the external Function to process the image and extract text
+                        # extracted_text = processAndExtract(image_path)
+
+                        # Create a worker thread
+                        self.worker = ProcessWorker(image_path)
+                        self.worker.processing_done.connect(self.on_processing_done)
+                        self.worker.processing_error.connect(self.on_processing_error)
+
+                        # Start the worker thread
+                        self.worker.start()
 
                         # If the extracted text is a list, join it into a string
-                        if isinstance(extracted_text, list):
-                                medicine_names = extracted_text  #already a list of medicines
-                        else:
-                                medicine_names=extracted_text.split('\n') 
+                        # if isinstance(extracted_text, list):
+                        #         medicine_names = extracted_text  #already a list of medicines
+                        # else:
+                        #         medicine_names=extracted_text.split('\n') 
 
-                        # Populate medicine labels in the left layout (page 3)
-                        self.populate_medicine_labels(medicine_names)
+                        # # Populate medicine labels in the left layout (page 3)
+                        # self.populate_medicine_labels(medicine_names)
 
+                        #Close the loading page
+                        # self.loading_page.hide()
                         # Display extracted text in page3 (QTextEdit)
                         # self.display_textedit.setPlainText(extracted_text)
 
                         # Switch to page 3 to show the extracted text
-                        self.stackedWidget.setCurrentIndex(2)
+                        # self.stackedWidget.setCurrentIndex(2)
                 else:
                 # Handle the case where no image was selected (optional)
-                        QMessageBox.warning(self, "No Image Selected", "Please select an image first.")  
+                    QMessageBox.warning(self, "No Image Selected", "Please select an image first.")  
+                    self.loading_page.hide()
         except Exception as e:
             # Catch all other unexpected errors and display an error message
             QMessageBox.critical(None, "Error", f"An unexpected error occurred: {str(e)}")
+            self.loading_page.hide()
+        # finally:
+        #     #close the loading screen after processing
+        #     if hasattr(self, 'loading'):
+        #         self.loading.close()
+        #         del self.loading
     
 
     def show_copied_popup(self):
@@ -136,19 +210,23 @@ class Ui_MainWindow(object):
     def update_right_panel(self, data):
         #Update Name
         self.name_label.setText(data.get("name", "Name not available"))
+        self.name_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
         #Update composition
         self.Composition_label.setText(f"Composition: {data.get('composition1', ' Not Available')}")
+        self.Composition_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
         # Update Manufacturer
         self.manufacturer_label.setText(f"Manufacturer: {data.get('manufacturer_name', ' Not Available')}")
-        
+        self.manufacturer_label.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
+
         # Update Description
         usage_info = data.get("usage1", "\nNo description available.")
         # Format the usage description (if it's a list, convert to a string)
         if isinstance(usage_info, list):
             usage_info = "\n".join(usage_info)
         self.description_widget.setText(f"Description:\n{usage_info}")
+        self.description_widget.setTextInteractionFlags(Qt.TextInteractionFlag.TextSelectableByMouse)
 
     def fetch_medicine_data(self,medicine_name):
         """
@@ -766,13 +844,12 @@ class MainWindow(QMainWindow, Ui_MainWindow):
     def __init__(self):
         super().__init__()
         self.setupUi(self)
-        # self.pick_image_pushbutton.clicked.connect(self.open_file_dialog)
-        # Set window title
-        self.setWindowTitle("OCR Application")
-        
+        self.setWindowTitle("RxVision")
         # Set window icon
         self.setWindowIcon(QIcon(r"resource\windowicon.ico"))
 
+        # Add the LoadingPage
+        self.loading_page = LoadingPage(self)
 
 if __name__ == "__main__":
         app= QApplication(sys.argv)
