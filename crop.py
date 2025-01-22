@@ -13,7 +13,7 @@ class CropImageDialog(QDialog):
         self.pixmap = self.pixmap.transformed(transform)
         self.update_image_display()
 
-    def __init__(self, image_path, parent=None):
+    def __init__(self, image_path,medicine_dataset, parent=None):
         super().__init__(parent)
         self.setWindowTitle("Crop Image")
         self.setWindowIcon(QIcon(r"resource\cropwindow.png"))

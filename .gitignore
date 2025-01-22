@@ -1,1 +1,6 @@
-gui/resource/client_secret_code.json
+resource/client_secret_code.json
+__pycache__/
+error_log.txt
+tempCodeRunnerFile.py
+temp/
+api.py
