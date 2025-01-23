@@ -18,6 +18,7 @@ class CropImageDialog(QDialog):
         self.setWindowTitle("Crop Image")
         self.setWindowIcon(QIcon(r"resource\cropwindow.png"))
         self.image_path = image_path
+        self.medicine_dataset= medicine_dataset
         self.rotation_angle=0 #To keep track of the orientation of the image
         self.scale_factor= 1.0 #initial scale factor of the image
 
@@ -181,7 +182,7 @@ class CropImageDialog(QDialog):
             cropped_pixmap = QPixmap(cropped_image_path)
 
              # Call the text extraction function and pass the cropped image
-            extracted_text = extract_text_from_image(r"cropped_image.png")  # Pass the saved cropped image path
+            extracted_text = extract_text_from_image(cropped_image_path,self.medicine_dataset)  # Pass the saved cropped image path
 
              # Save or return the cropped image
             cropped_pixmap.save("cropped_image.png")  # Save the cropped image
@@ -192,8 +193,8 @@ class CropImageDialog(QDialog):
             return cropped_image_path
         return None
 
-def open_crop_window(image_path):
-    dialog = CropImageDialog(image_path)
+def open_crop_window(image_path,medicine_dataset):
+    dialog = CropImageDialog(image_path,medicine_dataset)
     if dialog.exec() == QDialog.DialogCode.Accepted:
         # Cropping confirmed, return the cropped image
         return dialog.confirm_crop()  # Return the cropped image pat

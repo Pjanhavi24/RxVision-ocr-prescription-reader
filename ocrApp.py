@@ -182,7 +182,7 @@ class Ui_MainWindow(object):
     def open_crop_window(self):
         if hasattr(self, 'selected_image_path') and self.selected_image_path:
                 # Call the crop window and get the cropped image path
-            cropped_image_path = open_crop_window(self.selected_image_path)
+            cropped_image_path = open_crop_window(self.selected_image_path,medicine_dataset)
 
             if cropped_image_path:
                 # Load the cropped image from file into a QPixmap
@@ -193,13 +193,11 @@ class Ui_MainWindow(object):
                 self.preview_image_label.setScaledContents(True)
                 self.preview_image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-                # Pass the cropped image to the extraction engine
-                extracted_text = processAndExtract(cropped_image_path)
+                extrated_text_cropped= processAndExtract(cropped_image_path)
 
-                # Display extracted text in QTextEdit
-                self.display_textedit.setPlainText(extracted_text)
+                # Pass the cropped image to the populate_medicine function
+                self.populate_medicine_labels(extrated_text_cropped)
 
-                # Switch to page 3 to show the extracted text
                 self.stackedWidget.setCurrentIndex(2)
             else:
                 print("Cropping was canceled or failed.")
@@ -259,7 +257,7 @@ class Ui_MainWindow(object):
         MainWindow.setStyleSheet(u"QMainWindow{\n"
 "background-color: #FFFFFF\n"
 "}")
-
+        # self.display_textedit=QTextEdit(self)
         self.centralwidget = QWidget(MainWindow)
         self.centralwidget.setObjectName(u"centralwidget")
         self.centralwidget.setStyleSheet(u"")
@@ -850,6 +848,13 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 
         # Add the LoadingPage
         self.loading_page = LoadingPage(self)
+        self.loading_page.setGeometry(0, 0, self.width(), self.height())
+    
+    def resizeEvent(self, event):
+            super().resizeEvent(event)  # Ensure default behavior
+            # Dynamically resize the loading page to match the window size
+            self.loading_page.setGeometry(0, 0, self.width(), self.height())
+            
 
 if __name__ == "__main__":
         app= QApplication(sys.argv)
