@@ -2,8 +2,8 @@
 
 import sys
 import ctypes
+import cv2
 from open_file_dialog import open_file_dialog
-# from error import *
 from api_handler import get_medicine_data
 from check_internet import *
 from switchpages import *
@@ -11,8 +11,10 @@ from crop import open_crop_window
 from loading import LoadingPage
 from process_and_extract import *
 from process_and_extract import processAndExtract
-from PyQt6.QtCore import (QCoreApplication,QThread, QDate, QDateTime, QLocale, QMetaObject, QObject, QPoint, QRect, QSize, QTime, QUrl, Qt, QTimer, pyqtSignal)
-from PyQt6.QtGui import (QBrush, QColor, QConicalGradient, QCursor, QFont, QFontDatabase, QGradient, QIcon, QImage, QKeySequence, QLinearGradient, QPainter, QPalette, QPixmap, QRadialGradient, QTransform)
+from PyQt6.QtMultimedia import QMediaPlayer
+from PyQt6.QtMultimediaWidgets import QVideoWidget
+from PyQt6.QtCore import (QCoreApplication,QThread,QUrl, QDate, QDateTime, QLocale, QMetaObject, QObject, QPoint, QRect, QSize, QTime, QUrl, Qt, QTimer, pyqtSignal)
+from PyQt6.QtGui import (QBrush, QColor, QConicalGradient, QCursor,QMovie, QFont, QFontDatabase, QGradient, QIcon, QImage, QKeySequence, QLinearGradient, QPainter, QPalette, QPixmap, QRadialGradient, QTransform)
 from PyQt6.QtWidgets import (QApplication, QFrame, QHBoxLayout, QLabel, QMainWindow, QPushButton, QSizePolicy, QSpacerItem, QStackedWidget, QTextEdit,QScrollArea, QVBoxLayout, QWidget, QGraphicsDropShadowEffect,QMessageBox)
 
 #Class to make the label Clickable like a button to call the API
@@ -92,70 +94,42 @@ class Ui_MainWindow(object):
 
     def confirm_selection(self):
         try:
-                #Show the loading screen
-                # self.loading_page.setGeometry(0, 0, self.width(), self.height())
-                # self.loading_page.show()
-                # self.loading_page.raise_()
-                # self.loading_page.update()
-
-                self.loading_page.show_loading()
-                
-                # Check internet connectivity
-                if not check_internet_connection():
-                        QMessageBox.warning(None, "Internet Connection Error", "No internet connection. Please check your network and try again.")
-                        self.loading_page.hide()
-                        return
-                
-                #Ensure that an image has been selected
-                if hasattr(self, 'selected_image_path') and self.selected_image_path:
-                        # Get the image path selected in the file picker
-                        image_path = self.selected_image_path #This should be set during Image Selection
+            self.loading_page.show_loading()
+            
+            # Check internet connectivity
+            if not check_internet_connection():
+                QMessageBox.warning(None, "Internet Connection Error", "No internet connection. Please check your network and try again.")
+                self.loading_page.hide()
+                return
+            
+            #Ensure that an image has been selected
+            if hasattr(self, 'selected_image_path') and self.selected_image_path:
+                # Get the image path selected in the file picker
+                image_path = self.selected_image_path #This should be set during Image Selection
 
 
-                        # #Call the external Function to process the image and extract text
-                        # extracted_text = processAndExtract(image_path)
+                # #Call the external Function to process the image and extract text
+                # extracted_text = processAndExtract(image_path)
 
-                        # Create a worker thread
-                        self.worker = ProcessWorker(image_path)
-                        self.worker.processing_done.connect(self.on_processing_done)
-                        self.worker.processing_error.connect(self.on_processing_error)
+                # Create a worker thread
+                self.worker = ProcessWorker(image_path)
+                self.worker.processing_done.connect(self.on_processing_done)
+                self.worker.processing_error.connect(self.on_processing_error)
 
-                        # Start the worker thread
-                        self.worker.start()
+                # Start the worker thread
+                self.worker.start()
 
-                        # If the extracted text is a list, join it into a string
-                        # if isinstance(extracted_text, list):
-                        #         medicine_names = extracted_text  #already a list of medicines
-                        # else:
-                        #         medicine_names=extracted_text.split('\n') 
-
-                        # # Populate medicine labels in the left layout (page 3)
-                        # self.populate_medicine_labels(medicine_names)
-
-                        #Close the loading page
-                        # self.loading_page.hide()
-                        # Display extracted text in page3 (QTextEdit)
-                        # self.display_textedit.setPlainText(extracted_text)
-
-                        # Switch to page 3 to show the extracted text
-                        # self.stackedWidget.setCurrentIndex(2)
-                else:
-                # Handle the case where no image was selected (optional)
-                    QMessageBox.warning(self, "No Image Selected", "Please select an image first.")  
-                    self.loading_page.hide()
+            else:
+            # Handle the case where no image was selected (optional)
+                QMessageBox.warning(self, "No Image Selected", "Please select an image first.")  
+                self.loading_page.hide()
         except Exception as e:
             # Catch all other unexpected errors and display an error message
             QMessageBox.critical(None, "Error", f"An unexpected error occurred: {str(e)}")
             self.loading_page.hide()
-        # finally:
-        #     #close the loading screen after processing
-        #     if hasattr(self, 'loading'):
-        #         self.loading.close()
-        #         del self.loading
-    
 
     def show_copied_popup(self):
-        # Create the label for the popup
+        # Create the label for the popups
         self.copied_label = QLabel("Text Copied", self)
         self.copied_label.setStyleSheet("background-color: None; color: black; font-size: 14px; padding: 5px;")
         self.copied_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -242,8 +216,30 @@ class Ui_MainWindow(object):
             self.update_right_panel(medicine_info)
         except Exception as e:
             print(f"Error fetching medicine data")
-             
+    
+    #methods to update, render and close the frame of the main screen bgvideo
+    def update_frame(self):
+            width=self.width()
+            height=self.height()
+            ret, frame = self.cap.read()
+            if not ret:
+                self.cap.set(cv2.CAP_PROP_POS_FRAMES,0) #restarts the video when it ends
+                return
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+            h, w, ch = frame.shape
+            bytes_per_line = ch * w
+            q_image = QImage(frame.data, w, h, bytes_per_line, QImage.Format.Format_RGB888)
+            self.home_animation.setPixmap(QPixmap.fromImage(q_image))
+            self.home_animation.setGeometry(0,0,width,height)
 
+    def on_resize(self,event):
+        """Resize video to fit the entire screen."""
+        self.background_video.setGeometry(0, 0, self.width(), self.height())
+        super().resizeEvent(event)
+
+    def closeEvent(self, event):
+        self.cap.release()
+        event.accept() #Accept the close event
 
     def setupUi(self, MainWindow):
         if not MainWindow.objectName():
@@ -322,17 +318,26 @@ class Ui_MainWindow(object):
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_7)
 
-        self.home_image_2 = QLabel(self.page_1)
-        self.home_image_2.setObjectName(u"home_image_2")
-        sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        sizePolicy2.setHorizontalStretch(0)
-        sizePolicy2.setVerticalStretch(0)
-        sizePolicy2.setHeightForWidth(self.home_image_2.sizePolicy().hasHeightForWidth())
-        self.home_image_2.setSizePolicy(sizePolicy2)
-        self.home_image_2.setPixmap(QPixmap(r"resource\home_image.png"))
-        self.home_image_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # self.home_image_2 = QLabel(self.page_1)
+        # self.home_image_2.setObjectName(u"home_image_2")
+        # sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        # sizePolicy2.setHorizontalStretch(0)
+        # sizePolicy2.setVerticalStretch(0)
+        # sizePolicy2.setHeightForWidth(self.home_image_2.sizePolicy().hasHeightForWidth())
+        # self.home_image_2.setSizePolicy(sizePolicy2)
+        # self.home_image_2.setPixmap(QPixmap(r"resource\home_image.png"))
+        # self.home_image_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        self.verticalLayout_2.addWidget(self.home_image_2)
+        self.home_animation= QLabel(self.page_1)
+        self.home_animation.setObjectName(u"home_screen_animation")
+        self.home_animation.setGeometry(0,0,self.width(),self.height())
+        self.home_animation.setScaledContents(True)
+        self.home_animation.lower()
+        #load the video
+        self.cap= cv2.VideoCapture("resource/homepageanimation2.mp4")
+        self.timer=QTimer(self)
+        self.timer.timeout.connect(self.update_frame)
+        self.timer.start(30)
 
         self.verticalSpacer_3 = QSpacerItem(20, 40, QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Expanding)
 
@@ -542,7 +547,7 @@ class Ui_MainWindow(object):
 
         self.preview_frame = QFrame(self.page_2)
         self.preview_frame.setObjectName(u"preview_frame")
-        sizePolicy2.setHeightForWidth(self.preview_frame.sizePolicy().hasHeightForWidth())
+        # sizePolicy2.setHeightForWidth(self.preview_frame.sizePolicy().hasHeightForWidth())
         self.preview_frame.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
         self.preview_frame.setStyleSheet(u"QFrame {\n"
 "    background: qlineargradient(\n"
@@ -789,7 +794,7 @@ class Ui_MainWindow(object):
         #endif // QT_CONFIG(whatsthis)
         self.mainHeading_1.setText(QCoreApplication.translate("MainWindow", u"RxVision", None))
         self.tagline.setText(QCoreApplication.translate("MainWindow", u"\"Effortlessly extract text from any image with our advanced OCR technology\"", None))
-        self.home_image_2.setText("")
+        # self.home_image_2.setText("")
         self.pick_image_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Pick an Image", None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"All Rights Reserved", None))
         self.label_2.setText("")
@@ -859,6 +864,5 @@ class MainWindow(QMainWindow, Ui_MainWindow):
 if __name__ == "__main__":
         app= QApplication(sys.argv)
         window= MainWindow()
-
         window.show()
         sys.exit(app.exec())
