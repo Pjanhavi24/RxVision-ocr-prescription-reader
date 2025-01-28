@@ -60,7 +60,9 @@ class LoadingPage(QWidget):
         self.setStyleSheet("background-color: rgba(255, 255, 255, 255);")  # Semi-transparent white background
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground,True)
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
-        self.setFixedSize(parent.size() if parent else self.size())  # Match parent size
+        # self.setFixedSize(parent.size() if parent else self.size())  # Match parent size
+        self.setGeometry(0, 0, parent.width(), parent.height())
+
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(50, 50, 50, 50)
@@ -80,20 +82,19 @@ class LoadingPage(QWidget):
             layout.addLayout(row_layout)
         self.hide()
 
-    def resizeEvent(self, event):
-        """Ensure the loading page dynamically resizes with the parent window."""
-        if self.parent():
-            self.setGeometry(0, 0, self.parent().width(), self.parent().height())
-        super().resizeEvent(event)
 
     def show_loading(self):
         """Show loading screen and update geometry to match parent size."""
         if self.parent():
             self.setGeometry(0, 0, self.parent().width(), self.parent().height())
         self.show()
-    
-    def show_loading(self):
-        self.show()  # Show loading screen
+        self.raise_() #ensure loading screen is on top
+
+    def resize_event(self,event):
+        """Ensure loading page resizes with parent window."""
+        if self.parent():
+            self.setGeometry(0, 0, self.parent().width(), self.parent().height())
+        super().resizeEvent(event)
 
     def hide_loading(self):
         self.hide()  # Hide loading screen
