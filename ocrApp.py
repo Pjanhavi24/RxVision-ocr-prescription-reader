@@ -66,7 +66,32 @@ class Ui_MainWindow(object):
 
     def call_switch_to_page3(self):
         switch_to_page3(self)  #Pass the MainWindow instance to the function
+    
+    def apply_theme(self):
+        #detect the systems base color
+        appPalette=QApplication.palette()
+        base_color=appPalette.color(QPalette.ColorRole.Window)
+        is_darkmode=base_color.lightness() < 128
 
+        # Debugging Output
+        print(f"Detected base color: {base_color.name()}, Dark Mode: {is_darkmode}")
+
+        if is_darkmode:
+            #Dark mode Theme
+            self.setStyleSheet("""QWidget#MainWindow {background-color: #2B2B2B;}
+                                  QLabel#page_3 {color:#000000}
+                                  QLabel#medicine_name {color:#000000}
+                                  QLabel#name_heading {color:#000000}
+                                  QLabel#composition_label {color:#000000}
+                                  QLabel#manufacture_label {color:#000000}
+                                  QLabel#description_label {color:#000000}
+                               """)             
+        else:
+            self.setStyleSheet("""
+            QWidget#MainWindow {
+                background-color: #F5F5F5;
+            }
+        """)
 
     def on_processing_done(self,medicine_names):
         # Populate medicine labels in the left layout (page 3)
@@ -249,7 +274,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(MainWindow.sizePolicy().hasHeightForWidth())
-        MainWindow.setSizePolicy(sizePolicy)
+        MainWindow.setSizePolicy(sizePolicy)        
         MainWindow.setStyleSheet(u"QMainWindow{\n"
 "background-color: #FFFFFF\n"
 "}")
@@ -317,16 +342,6 @@ class Ui_MainWindow(object):
         self.horizontalLayout_7.setObjectName(u"horizontalLayout_7")
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_7)
-
-        # self.home_image_2 = QLabel(self.page_1)
-        # self.home_image_2.setObjectName(u"home_image_2")
-        # sizePolicy2 = QSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        # sizePolicy2.setHorizontalStretch(0)
-        # sizePolicy2.setVerticalStretch(0)
-        # sizePolicy2.setHeightForWidth(self.home_image_2.sizePolicy().hasHeightForWidth())
-        # self.home_image_2.setSizePolicy(sizePolicy2)
-        # self.home_image_2.setPixmap(QPixmap(r"resource\home_image.png"))
-        # self.home_image_2.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         self.home_animation= QLabel(self.page_1)
         self.home_animation.setObjectName(u"home_screen_animation")
@@ -714,6 +729,7 @@ class Ui_MainWindow(object):
 
         #Name Heading Section
         self.name_label=QLabel("Name")
+        self.name_label.setObjectName("name_heading")
         self.name_label.setFont(medicine_name_heading_font)
         self.name_label.setStyleSheet("background-color: #bcbcbc; padding: 10px; border-radius: 5px;")
         self.name_label.setAlignment(Qt.AlignmentFlag.AlignLeft)
@@ -722,6 +738,7 @@ class Ui_MainWindow(object):
 
         #Composition name section
         self.Composition_label=QLabel("Composition: ")
+        self.Composition_label.setObjectName("composition_label")
         self.Composition_label.setFont(composition_label)
         self.Composition_label.setStyleSheet("background-color: #e0e0e0; padding: 10px; border-radius: 5px;")
         self.Composition_label.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -729,6 +746,7 @@ class Ui_MainWindow(object):
 
         #Manufacturer name section
         self.manufacturer_label=QLabel("Manufacturer: ")
+        self.manufacturer_label.setObjectName("manufacture_label")
         self.manufacturer_label.setFont(manufacturer_label)
         self.manufacturer_label.setStyleSheet("background-color: #e0e0e0; padding: 10px; border-radius: 5px;")
         self.manufacturer_label.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -737,7 +755,8 @@ class Ui_MainWindow(object):
         # Description Section (Scrollable)
         self.description_area = QScrollArea()
         self.description_area.setWidgetResizable(True)
-        self.description_widget = QLabel("Description: ")  # Example description
+        self.description_widget = QLabel("Description: ")
+        self.description_widget.setObjectName("description_label")
         self.description_widget.setFont(description_label)
         self.description_widget.setStyleSheet("background-color: #e0e0e0; border: 1px solid #cccccc; padding: 10px; border-radius: 5px;")
         self.description_widget.setAlignment(Qt.AlignmentFlag.AlignTop)
@@ -823,6 +842,7 @@ class Ui_MainWindow(object):
                 display_name= f"{index+1}. {name}"
                 # name=data.get("name", f"Medicine {index + 1}")  # Default to 'Medicine X' if name is missing
                 label= clickableLabel(display_name)  #Add Numbering
+                label.setObjectName("medicine_name")
                 label.setFont(font5)
                 label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 label.setStyleSheet("QLabel{background-color: #e0e0e0; border: 1px solid #cccccc; border-radius:8px; padding:10px}"
@@ -850,6 +870,9 @@ class MainWindow(QMainWindow, Ui_MainWindow):
         self.setWindowTitle("RxVision")
         # Set window icon
         self.setWindowIcon(QIcon(r"resource\windowicon.ico"))
+        
+        #set dynamic theme of the app
+        self.apply_theme()
 
         # Add the LoadingPage
         self.loading_page = LoadingPage(self)
