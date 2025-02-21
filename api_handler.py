@@ -38,7 +38,7 @@ def get_medicine_data(medicine_name):
      
      try:
         cleaned_name=preprocess_medicine_name(medicine_name)
-        url=f"https://indianmedicinesapi-production-7a33.up.railway.app/api/v1/medicines?name={cleaned_name}"
+        url=f"https://vyt5wo7z44.execute-api.ap-south-1.amazonaws.com/default/api/v1/medicines?name={cleaned_name}"
 
         # Make the API request
         response = requests.get(url)

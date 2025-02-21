@@ -4,10 +4,15 @@ from PIL import Image
 from preprocessing import process_image
 import pandas as pd
 from google.cloud import vision
+import boto3
 from rapidfuzz import fuzz, process
 
 #initialize the Google vision api client using the json key
-client= vision.ImageAnnotatorClient.from_service_account_json(r"resource\client_secret_code.json")
+google_client= vision.ImageAnnotatorClient.from_service_account_json(r"resource\client_secret_code1.json")
+
+#initialize the aws textract client
+textract_client= boto3.client("textract", region_name= "ap-south-1")
+
 medicine_dataset=r"resource/medicine_names.csv"
 
 # Load the medicine dataset
@@ -41,21 +46,8 @@ def get_tesseract_confidence(image):
     #return average confidence score
     return sum(confidences)/len(confidences) if confidences else 0
 
-# Generate n-grams from a text
-# def generate_ngrams(text, n=3):
-#     """Generate n-grams from a given text."""
-#     return [text[i:i + n] for i in range(len(text) - n + 1)]
-
-# def match_chunk(chunk, query, threshold=70):
-#         results = []
-#         for name in chunk:
-#             score = fuzz.partial_ratio(query, name)
-#             if score >= threshold:
-#                 results.append(name)
-#         return results
-
 # Match extracted text against medicine
-def match_medicine(extracted_text, medicine_names, threshold=68):
+def match_medicine(extracted_text, medicine_names, threshold=68): #default threshold = 68
     """Match extracted text with the medicine dataset."""
     results = []
     for text in extracted_text.split("\n"):
@@ -67,7 +59,23 @@ def match_medicine(extracted_text, medicine_names, threshold=68):
             results.append(match[0])
     return results
 
-def extract_text_from_image(image_path,medicine_dataset,confidence_threshold=70):
+def extract_text_with_textract(image_path):
+    """Extract text from an image using AWS Textract."""
+    with open(image_path, "rb") as image_file:
+        image_bytes = image_file.read()
+
+    response = textract_client.detect_document_text(Document={"Bytes": image_bytes})
+
+    extracted_text = ""
+    for item in response["Blocks"]:
+        if item["BlockType"] == "LINE":  # Extract line-level text
+            extracted_text += item["Text"] + "\n"
+
+    return extracted_text
+
+
+
+def extract_text_from_image(image_path,medicine_dataset,confidence_threshold=70): #default threshold = 70
     """Extract only medicine names from the image."""
     # Load the medicine dataset
     medicine_names = load_medicine_dataset(medicine_dataset)
@@ -88,27 +96,32 @@ def extract_text_from_image(image_path,medicine_dataset,confidence_threshold=70)
     # Step 2: If confidence is low, switch to Google Vision API
     if confidence < confidence_threshold:
         try:
-            with open(image_path, 'rb') as image_file:
-                content = image_file.read()
+            extracted_text = extract_text_with_textract(image_path)
+        except Exception as e:
+            print(f"Error during Textract processing: {e}")
+            return ""
+        
+            # with open(image_path, 'rb') as image_file:
+            #     content = image_file.read()
 
-            # Prepare the image for Google Vision API
-            image = vision.Image(content=content)
-            # Add language hints to improve OCR accuracy
-            image_context = vision.ImageContext(language_hints=['en'])
+            # # Prepare the image for Google Vision API
+            # image = vision.Image(content=content)
+            # # Add language hints to improve OCR accuracy
+            # image_context = vision.ImageContext(language_hints=['en'])
             # Call the document text detection API with language hints
-            response = client.document_text_detection(image=image, image_context=image_context)
+            # response = client.document_text_detection(image=image, image_context=image_context)
 
             # Handle any API errors
-            if response.error.message:
-                raise Exception(f"Google Vision API error: {response.error.message}")
+        #     if response.error.message:
+        #         raise Exception(f"Google Vision API error: {response.error.message}")
             
-            # Extract text from the Google Vision API response
-            extracted_text = response.full_text_annotation.text
-            # print("Raw ocr text: ",extracted_text)
+        #     # Extract text from the Google Vision API response
+        #     extracted_text = response.full_text_annotation.text
+        #     # print("Raw ocr text: ",extracted_text)
         
-        except Exception as e:
-            print(f"Error during vision api processing:{e}")
-            return ""
+        # except Exception as e:
+        #     print(f"Error during vision api processing:{e}")
+        #     return ""
         
     # Step 3: Match extracted text with medicine dataset
     results = match_medicine(extracted_text, medicine_names)
