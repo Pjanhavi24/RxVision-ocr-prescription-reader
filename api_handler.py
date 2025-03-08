@@ -1,7 +1,7 @@
 import requests
 import re
 
-EXCLUDED_TERMS= ["tablet", "syrup", "injection", "nasal spray", "cream", "ointment", "drop", "sachet"]
+# EXCLUDED_TERMS= ["tablet", "syrup", "injection", "nasal spray", "cream", "ointment", "drop", "sachet"]
 
 def preprocess_medicine_name(medicine_name):
     """
@@ -18,12 +18,12 @@ def preprocess_medicine_name(medicine_name):
         raise TypeError(f"Expected a string, but got {type(medicine_name)}: {medicine_name}")
 
     # Create a regex pattern to match the unwanted terms
-    pattern = r"\b(" + "|".join(map(re.escape, EXCLUDED_TERMS)) + r")\b"
+    # pattern = r"\b(" + "|".join(map(re.escape)) + r")\b"
 
     # Remove unwanted terms and extra spaces
-    cleaned_name = re.sub(pattern, "", medicine_name, flags=re.IGNORECASE).strip()
+    # cleaned_name = re.sub(pattern, "", medicine_name, flags=re.IGNORECASE).strip()
 
-    return cleaned_name
+    return medicine_name
 
 def get_medicine_data(medicine_name):
      """

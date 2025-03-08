@@ -6,11 +6,18 @@ class CropImageDialog(QDialog):
 
     def update_image_display(self):
         self.image_label.setPixmap(self.pixmap)
-        self.layout.addWidget(self.image_label)
+        # Make sure the image is centered
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
     def rotate_image(self):
-        transform = QTransform().rotate(90)  # Rotate by 90 degrees
+        # Update the rotation angle
+        self.rotation_angle = (self.rotation_angle + 90) % 360
+        
+        # Create a new transformed pixmap
+        transform = QTransform().rotate(90)
         self.pixmap = self.pixmap.transformed(transform)
+        
+        # Update the image display without changing the layout
         self.update_image_display()
 
     def __init__(self, image_path,medicine_dataset, parent=None):
@@ -27,32 +34,24 @@ class CropImageDialog(QDialog):
         max_height = 800  # Set your maximum height
         self.setMaximumSize(max_width, max_height)
 
-
         # Initialize pixmap with the image
-        self.pixmap = QPixmap(image_path)  # Ensure image_path is a valid path
-
+        self.original_pixmap = QPixmap(image_path)  # Ensure image_path is a valid path
+        self.pixmap= QPixmap(image_path)
         # Scale the image if it's larger than the maximum size
         scaled_pixmap = self.pixmap
-        if self.pixmap.width() > max_width or self.pixmap.height() > max_height:
-            scaled_pixmap = self.pixmap.scaled(max_width, max_height, Qt.AspectRatioMode.KeepAspectRatio)
-
-        # Set a maximum size for the dialog
-        # max_width = 800  # Set your maximum width
-        # max_height = 600  # Set your maximum height
-        # scaled_pixmap = self.pixmap.scaled(max_width, max_height, Qt.AspectRatioMode.KeepAspectRatio)
-
-        
-        
-        self.pixmap = scaled_pixmap
+        if self.original_pixmap.width() > max_width or self.original_pixmap.height() > max_height:
+            self_pixmap = self.orignal_pixmap.scaled(max_width, max_height, Qt.AspectRatioMode.KeepAspectRatio)
+        else:
+            self.pixmap = self.original_pixmap.copy()
 
         # Scroll Area to hold the image label (allows scrolling for large images)
         self.scroll_area = QScrollArea(self)
         self.scroll_area.setWidgetResizable(True)
-        self.image_label = QLabel(self)
         self.scroll_area.setAlignment(Qt.AlignmentFlag.AlignCenter) 
         
         # QLabel to show the image (for cropping)
         self.image_label = QLabel(self)
+        self.image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.image_label.setPixmap(self.pixmap)
 
         # Add rotate button
@@ -60,26 +59,18 @@ class CropImageDialog(QDialog):
         self.rotate_button.clicked.connect(self.rotate_image)
         self.rotate_button.setFixedSize(100, 40)
 
-        
-        # Add a confirm button
-        self.confirm_button = QPushButton("Confirm", self)
-        self.confirm_button.clicked.connect(self.confirm_crop)
-        self.confirm_button.setFixedSize(100, 40)
-        self.confirm_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
-        # self.confirm_button.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        font= QFont()
+         # Font setup for buttons
+        font = QFont()
         font.setFamilies([u"Calibri"])
         font.setPointSize(12)
         font.setBold(True)
-        self.confirm_button.setFont(font)
-        self.confirm_button.setStyleSheet(
-            """
+
+        # Style buttons
+        button_style = """
             QPushButton {
                 color: #ffffff;
                 background-color: #9c9c9c;
                 border-radius: 9px;
-                font.setFamilies([u"Berlin Sans FB Demi"])
             }
             QPushButton:hover {
                 color: #111111;
@@ -87,18 +78,31 @@ class CropImageDialog(QDialog):
                 border: 1px solid #cccccc;
             }
             QPushButton:pressed {
-                background-color: #38454C;  /* Darker background when pressed */
-                padding-top: 5px;  /* Slightly decrease padding for pressed effect */
-                padding-left: 10px;  /* Slightly decrease padding for pressed effect */
+                background-color: #38454C;
+                padding-top: 5px;
+                padding-left: 10px;
             }
-            """
-        )
+        """
+        self.rotate_button.setFont(font)
+        self.rotate_button.setStyleSheet(button_style)
 
+        # Add a confirm button
+        self.confirm_button = QPushButton("Confirm", self)
+        self.confirm_button.clicked.connect(self.confirm_crop)
+        self.confirm_button.setFixedSize(100, 40)
+        self.confirm_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Preferred)
+        self.confirm_button.setFont(font)
+        self.confirm_button.setStyleSheet(button_style)
+
+        # Create a button layout to organize buttons
+        button_layout = QVBoxLayout()
+        button_layout.addWidget(self.rotate_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        button_layout.addWidget(self.confirm_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        
         # Set layout
         self.layout = QVBoxLayout(self)
         self.layout.addWidget(self.image_label)
-        self.layout.addWidget(self.confirm_button)
-        self.layout.addWidget(self.confirm_button, alignment=Qt.AlignmentFlag.AlignCenter)  # Center the button in the layout
+        self.layout.addLayout(button_layout)  # Add the button layout to the main layout
 
         # Variables for cropping
         self.crop_start = None
@@ -112,11 +116,12 @@ class CropImageDialog(QDialog):
     
     def update_scaled_pixmap(self):
         # Scale the image based on the scale factor
-        self.scaled_pixmap = self.pixmap.scaled(self.pixmap.size() * self.scale_factor, Qt.AspectRatioMode.KeepAspectRatio)
-        self.image_label.setPixmap(self.scaled_pixmap)
-
-        # Update the size of the image label to the scaled pixmap size
-        self.image_label.setFixedSize(self.scaled_pixmap.size())
+        scaled_pixmap = self.pixmap.scaled(
+            int(self.pixmap.width() * self.scale_factor),
+            int(self.pixmap.height() * self.scale_factor),
+            Qt.AspectRatioMode.KeepAspectRatio
+        )
+        self.image_label.setPixmap(scaled_pixmap)
 
     def wheelEvent(self, event):
         # Zoom in or out based on the scroll direction
@@ -129,8 +134,8 @@ class CropImageDialog(QDialog):
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            self.is_cropping = True
-            self.crop_start = event.pos()
+            self.is_cropping=True
+            self.crop_start=event.pos()
 
     def mouseMoveEvent(self, event):
         if self.is_cropping:
@@ -178,14 +183,14 @@ class CropImageDialog(QDialog):
             cropped_image_path = "cropped_image.png"
             cropped_pixmap.save(cropped_image_path)  # Save the cropped image
 
-             # Load the cropped image back as QPixmap to set in the preview label
-            cropped_pixmap = QPixmap(cropped_image_path)
+            # Load the cropped image back as QPixmap to set in the preview label
+            # cropped_pixmap = QPixmap(cropped_image_path)
 
              # Call the text extraction function and pass the cropped image
             extracted_text = extract_text_from_image(cropped_image_path,self.medicine_dataset)  # Pass the saved cropped image path
 
-             # Save or return the cropped image
-            cropped_pixmap.save("cropped_image.png")  # Save the cropped image
+            # Save or return the cropped image
+            # cropped_pixmap.save("cropped_image.png")  # Save the cropped image
 
             # Close the dialog and confirm the crop
             self.accept()

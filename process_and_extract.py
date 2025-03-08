@@ -1,4 +1,5 @@
 from text_extraction import *
+import os
 from preprocessing import process_image
 
 
@@ -11,7 +12,7 @@ def processAndExtract(image_path):
     
     #step1: Process the image
     processed_image_path=process_image(image_path)
-    if not process_image:
+    if not image_path:
         print("Image processing failed")
         return None
 
@@ -20,5 +21,6 @@ def processAndExtract(image_path):
     print(extracted_text)
     return extracted_text
 
+#kept for standalone testing
 # image_path=r"C:\Users\aujal\OneDrive\Desktop\Testing Images\image (23).jpg"
 # processAndExtract(image_path)

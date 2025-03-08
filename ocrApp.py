@@ -49,6 +49,12 @@ class ProcessWorker(QThread):
         try:
             # Call the external function to process the image and extract text
             extracted_text= processAndExtract(self.image_path)
+
+            # ✅ Check if extracted_text is valid before using .split()
+            if not extracted_text:
+                self.processing_done.emit([])  # Emit an empty list if no text is found
+                return  # Exit the function early
+        
             # If the extracted text is a list, send it directly
             if isinstance(extracted_text, list):
                 self.processing_done.emit(extracted_text)
@@ -102,6 +108,10 @@ class Ui_MainWindow(object):
 
         # Switch to page 3 to show the extracted text
         self.stackedWidget.setCurrentIndex(2)
+
+        if hasattr (self,'worker'):
+            self.worker.deleteLater()
+            worker=None
 
         #clean up the worker
         self.worker.deleteLater()
@@ -349,7 +359,7 @@ class Ui_MainWindow(object):
         self.home_animation.setScaledContents(True)
         self.home_animation.lower()
         #load the video
-        self.cap= cv2.VideoCapture("resource/homepageanimation2.mp4")
+        self.cap= cv2.VideoCapture("resource/homeanimationfinal.mov")
         self.timer=QTimer(self)
         self.timer.timeout.connect(self.update_frame)
         self.timer.start(30)
@@ -381,33 +391,31 @@ class Ui_MainWindow(object):
         self.pick_image_pushbutton.setFont(font2)
         self.pick_image_pushbutton.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.pick_image_pushbutton.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
-        self.pick_image_pushbutton.setStyleSheet(u"QPushButton\n"
-"{\n"
-"color:#ffffff;\n"
-"background-color:#9c9c9c;\n"
-"border-radius:9;\n"
-"transition: background-color 0.5s ease-in-out, \n"
-"                color 0.5s ease-in-out, \n"
-"                padding 0.2s ease-in-out, \n"
-"border:1px solid #cccccc;\n"
-"}\n"
-"QPushButton:hover\n"
-"{\n"
-"color:#111111;\n"
-"background-color:#ffffff;\n"
-"transition: background-color 1s ease-in-out, \n"
-"            color 1s ease-in-out, \n"
-"            padding 0.2s ease-in-out, \n"
-"border:1px solid #cccccc\n"
-"}\n"
-"QPushButton:pressed {\n"
-"    background-color: #38454C;  /* Darker background when pressed */\n"
-"    padding-top: 5px;  /* Slightly decrease padding for pressed effect */\n"
-"    padding-left: 10px;  /* Slightly decrease padding for pressed effect */\n"
-"}")
+        self.pick_image_pushbutton.setFixedSize(65,42)
+        self.pick_image_pushbutton.setStyleSheet("""
+    QPushButton {
+        color: #ffffff;
+        background-color: #ffffff;
+        border-radius: 20px;  /* Adjusted for rounded look */
+        border: 1px solid #222222;
+    }
+    QPushButton:hover {
+        color: #111111;
+        background-color: #c1c1c1;
+        border-color: #959595;  /* Add hover effect for the border */
+    }
+    QPushButton:pressed {
+        background-color: #9c9c9c;  /* Darker background when pressed */
+        padding-top: 5px;  /* Slightly decrease padding for pressed effect */
+        padding-left:5px;  /* Slightly decrease padding for pressed effect */
+    }
+""")
+        pick_image_pixmap=QPixmap("resource/pick_image.svg")
+        pick_image_icon=QIcon(pick_image_pixmap)
 
-        self.horizontalLayout_2.addWidget(self.pick_image_pushbutton)
-
+        self.pick_image_pushbutton.setIcon(pick_image_icon)
+        self.pick_image_pushbutton.setIconSize(QSize(30,30))
+        self.verticalLayout_3.addWidget(self.pick_image_pushbutton)
 
         self.verticalLayout_2.addLayout(self.horizontalLayout_2)
 
@@ -693,6 +701,27 @@ class Ui_MainWindow(object):
         self.left_layout.addStretch()
         self.left_panel.setLayout(self.left_layout)
 
+        #back button 
+        self.back_button=QPushButton("")
+        self.back_button.setFixedSize(65,45)
+        self.back_button.setStyleSheet("""
+            QPushButton {
+            background-color: #6B7075;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 18px;
+            font-size: 14px;
+            
+        }""")
+        button_pixmap=QPixmap("resource/return.svg")
+        back_icon=QIcon(button_pixmap)
+
+        self.back_button.setIcon(back_icon)
+        self.back_button.setIconSize(QSize(30,30))
+        self.back_button.clicked.connect(self.call_switch_to_page2)
+        self.left_layout.addWidget(self.back_button)
+
         #Create a right Panel
         self.right_panel=QWidget()
         self.right_layout=QVBoxLayout(self.right_panel)
@@ -814,7 +843,7 @@ class Ui_MainWindow(object):
         self.mainHeading_1.setText(QCoreApplication.translate("MainWindow", u"RxVision", None))
         self.tagline.setText(QCoreApplication.translate("MainWindow", u"\"Effortlessly extract text from any image with our advanced OCR technology\"", None))
         # self.home_image_2.setText("")
-        self.pick_image_pushbutton.setText(QCoreApplication.translate("MainWindow", u"Pick an Image", None))
+        self.pick_image_pushbutton.setText(QCoreApplication.translate("MainWindow",None))
         self.label_3.setText(QCoreApplication.translate("MainWindow", u"All Rights Reserved", None))
         self.label_2.setText("")
         self.label.setText(QCoreApplication.translate("MainWindow", u"RxVision", None))
@@ -834,8 +863,11 @@ class Ui_MainWindow(object):
         while self.left_layout.count():
             item = self.left_layout.takeAt(0)
             widget = item.widget()
-            if widget:
+            if widget and widget!= self.back_button:
                 widget.deleteLater()
+
+        self.left_layout.insertWidget(0,self.back_button)
+
         #Add medicine label or display no medicine detected
         if medicine_names:
             for index,name in enumerate (medicine_names):
